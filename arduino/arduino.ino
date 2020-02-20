@@ -1,5 +1,6 @@
 #include <SPI.h>
 #include "radio.h"
+#include "epaper.h"
 
 void setup() {
     Serial.begin(115200);
@@ -7,6 +8,7 @@ void setup() {
 
     radioConfigure();
     radioFetch();
+    epaperSetup();
 }
 
 void loop() {

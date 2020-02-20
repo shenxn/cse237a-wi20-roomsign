@@ -2,8 +2,7 @@
 
 !.gitignore
 !*.ino
+!*.cpp
+!*.h
 !arduino
-!arduino/radio.cpp
-!arduino/radio.h
 !rpi
-!rpi/radio.cpp
