@@ -4,6 +4,11 @@
 !*.ino
 !*.cpp
 !*.h
+!*.py
+!*.tpl
 !arduino
 !arduino/epaper
+!arduino/templates
 !rpi
+
+arduino/epaper/imagedata.cpp

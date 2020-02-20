@@ -1,6 +1,6 @@
 /**
- *  @filename   :   imagedata.h
- *  @brief      :   head file for imagedata.cpp
+ *  @filename   :   imagedata.cpp
+ *  @brief      :   data file for epd demo
  *
  *  Copyright (C) Waveshare     September 5 2017
  *
@@ -23,9 +23,13 @@
  * THE SOFTWARE.
  */
 
-extern const unsigned char IMAGE_DATA_INUSE[];
-extern const unsigned char IMAGE_DATA_AVAILABLE[];
+#include "imagedata.h"
+#include <avr/pgmspace.h>
 
-/* FILE END */
+const unsigned char IMAGE_DATA_INUSE[] PROGMEM = {
+${imgDataInUse}
+};
 
-
+const unsigned char IMAGE_DATA_AVAILABLE[] PROGMEM = {
+${imgDataAvailable}
+};

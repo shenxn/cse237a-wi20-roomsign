@@ -11,21 +11,35 @@ void epaperSetup() {
         return;
     }
 
-    // epd.ClearFrameMemory(0xFF);   // bit set = white, bit reset = black
-    // epd.DisplayFrame();
-    // epd.ClearFrameMemory(0xFF);   // bit set = white, bit reset = black
-    // epd.DisplayFrame();
+    epd.ClearFrameMemory(0xFF);
+    epd.DisplayFrame();
+    epd.ClearFrameMemory(0xFF);
+    epd.DisplayFrame();
 
-    /** 
-     *  there are 2 memory areas embedded in the e-paper display
-     *  and once the display is refreshed, the memory area will be auto-toggled,
-     *  i.e. the next action of SetFrameMemory will set the other memory area
-     *  therefore you have to clear the frame memory twice.
-     */
-    epd.SetFrameMemory(IMAGE_DATA);
-    epd.DisplayFrame();
-    epd.SetFrameMemory(IMAGE_DATA);
-    epd.DisplayFrame();
+    epd.Sleep();
+}
+
+
+void epaperDisplay(unsigned int available) {
+    Serial.print("display available: ");
+    Serial.println(available);
+
+    if (epd.Init(lut_full_update) != 0) {
+        Serial.print("e-Paper init failed");
+        return;
+    }
+
+    if (available) {
+        epd.SetFrameMemory(IMAGE_DATA_AVAILABLE);
+        epd.DisplayFrame();
+        epd.SetFrameMemory(IMAGE_DATA_AVAILABLE);
+        epd.DisplayFrame();
+    } else {
+        epd.SetFrameMemory(IMAGE_DATA_INUSE);
+        epd.DisplayFrame();
+        epd.SetFrameMemory(IMAGE_DATA_INUSE);
+        epd.DisplayFrame();
+    }
 
     epd.Sleep();
 }

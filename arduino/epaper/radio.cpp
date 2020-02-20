@@ -23,7 +23,7 @@ void radioConfigure() {
     radio.printDetails();
 }
 
-void radioFetch() {
+unsigned int radioFetch() {
     while (1) {
         radio.stopListening();
 
@@ -45,11 +45,11 @@ void radioFetch() {
         if (timeout) {
             Serial.println(F("failed - time out"));
         } else {
-            unsigned int status;
-            radio.read(&status, sizeof(unsigned int));
-            Serial.print(F("status: "));
-            Serial.println(status);
-            break;
+            unsigned int available;
+            radio.read(&available, sizeof(unsigned int));
+            Serial.print(F("available: "));
+            Serial.println(available);
+            return available;
         }
         
         // retry after 1 second

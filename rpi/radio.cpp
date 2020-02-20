@@ -72,6 +72,10 @@ int main(int argc, char** argv)
 
     radio.startListening();
 
+    unsigned int available;
+    std::cout << "Available? ";
+    std::cin >> available;
+
     // forever loop
     while (1) {
         // if there is data ready
@@ -85,8 +89,7 @@ int main(int argc, char** argv)
             }
             radio.stopListening();
 
-            unsigned int status = 0;
-            radio.write(&status, sizeof(unsigned int));
+            radio.write(&available, sizeof(unsigned int));
 
             // Now, resume listening so we catch the next packets.
             radio.startListening();
