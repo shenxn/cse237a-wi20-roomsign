@@ -5,4 +5,5 @@
 !*.cpp
 !*.h
 !arduino
+!arduino/epaper
 !rpi
