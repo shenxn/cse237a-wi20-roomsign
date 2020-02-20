@@ -92,15 +92,23 @@ int main(int argc, char** argv)
             radio.write(&available, sizeof(unsigned int));
 
             // Now, resume listening so we catch the next packets.
-            radio.startListening();
+            // radio.startListening();
 
             // Spew it
             printf("Got payload %d\n", op);
+            break;
 
             // delay(925); //Delay after payload responded to, minimize RPi CPU time
 
         }
         delay(100);
+    }
+
+    while (1) {
+        std::cout << "Available? ";
+        std::cin >> available;
+        radio.write(&available, sizeof(unsigned int));
+        printf("Sent %d\n", available);
     }
 
     return 0;

@@ -2,6 +2,7 @@
 #include "RF24.h"
 #include "radio.h"
 #include "printf.h"
+#include "status.h"
 
 byte txAddress[] = "1Node";
 byte rxAddress[] = "2Node";
@@ -23,7 +24,7 @@ void radioConfigure() {
     radio.printDetails();
 }
 
-unsigned int radioFetch() {
+void radioFetch() {
     while (1) {
         radio.stopListening();
 
@@ -45,14 +46,22 @@ unsigned int radioFetch() {
         if (timeout) {
             Serial.println(F("failed - time out"));
         } else {
-            unsigned int available;
-            radio.read(&available, sizeof(unsigned int));
-            Serial.print(F("available: "));
-            Serial.println(available);
-            return available;
+            radioRead();
+            return;
         }
         
         // retry after 1 second
         delay(1000);
+    }
+}
+
+void radioRead() {
+    if (radio.available()) {
+        unsigned int available;
+        radio.read(&available, sizeof(unsigned int));
+        status.available = available;
+        status.updated = true;
+        Serial.print(F("available: "));
+        Serial.println(available);
     }
 }

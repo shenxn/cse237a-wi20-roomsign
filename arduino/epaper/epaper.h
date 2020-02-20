@@ -6,6 +6,6 @@
 
 void epaperSetup();
 
-void epaperDisplay(unsigned int available);
+void epaperDisplay();
 
 #endif

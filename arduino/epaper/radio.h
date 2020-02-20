@@ -7,6 +7,7 @@
 #define WAITING_TIMEOUT 500000  // 500 ms
 
 void radioConfigure();
-unsigned int radioFetch();
+void radioFetch();
+void radioRead();
 
 #endif

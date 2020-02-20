@@ -1,6 +1,7 @@
 #include <SPI.h>
 #include "radio.h"
 #include "epaper.h"
+#include "status.h"
 
 void setup() {
     Serial.begin(115200);
@@ -13,10 +14,12 @@ void setup() {
     radioConfigure();
 
     Serial.println(F("initial status fetch"));
-    unsigned int available = radioFetch();
-    epaperDisplay(available);
+    radioFetch();
+    epaperDisplay();
 }
 
 void loop() {
-    delay(500);
+    radioRead();
+    epaperDisplay();
+    delay(1000);
 }
