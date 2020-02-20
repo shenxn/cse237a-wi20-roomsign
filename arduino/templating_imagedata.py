@@ -3,14 +3,11 @@ from PIL import Image
 from PIL import ImageDraw
 from PIL import ImageFont
 from mako.template import Template
+from templating_const import *
 
 width = 296
 height = 128
 padding = 16
-colored = 0
-uncolored = 1
-
-fontPath = 'UbuntuMono-R.ttf'
 
 roomName = "ROOM B210"
 roomNameHeight = 24
@@ -18,8 +15,8 @@ roomNameFontSize = 20
 
 statusInUse = "IN USE"
 statusAvailable = "AVAILABLE"
-statusWidth = 96
-statusFontSize = 22
+statusWidth = 104
+statusFontSize = 24
 
 detailPadding = 16
 detailLineHeight = 24
@@ -50,9 +47,9 @@ def genImageData(available):
         fnt = ImageFont.truetype(fontPath, detailFontSize)
         x = statusWidth + detailPadding
         y = (detailLineHeight - detailFontSize) / 2 + roomNameHeight + detailPadding
-        draw.text((x, y), 'BY   Xiaonan S', font=fnt)
+        draw.text((x, y), 'BY', font=fnt)
         y += detailLineHeight
-        draw.text((x, y), 'Time 11:25am-12:44pm', font=fnt)
+        draw.text((x, y), 'Time', font=fnt)
 
     imgData = np.array(img)
     imgDataStr = ''
@@ -60,7 +57,7 @@ def genImageData(available):
         for j in range(0, height, 8):
             v = 0
             for k in range(8):
-                v = v * 2 + imgData[height - j - k - 1][i]
+                v = v * 2 + imgData[height - j - k - 1, i]
             imgDataStr += hex(v) + ','
     return imgDataStr
 
@@ -70,5 +67,5 @@ content = template.render(
     imgDataInUse=genImageData(False),
     imgDataAvailable=genImageData(True)
 )
-with open('epaper/imagedata.cpp', 'w') as f:
+with open(outputPathPrefix + '/imagedata.cpp', 'w') as f:
     print(content, file=f)

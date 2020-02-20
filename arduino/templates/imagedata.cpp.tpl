@@ -27,9 +27,9 @@
 #include <avr/pgmspace.h>
 
 const unsigned char IMAGE_DATA_INUSE[] PROGMEM = {
-${imgDataInUse}
+    ${imgDataInUse}
 };
 
 const unsigned char IMAGE_DATA_AVAILABLE[] PROGMEM = {
-${imgDataAvailable}
+    ${imgDataAvailable}
 };

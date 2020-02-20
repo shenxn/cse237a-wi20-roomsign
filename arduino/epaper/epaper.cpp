@@ -4,7 +4,12 @@
 #include "imagedata.h"
 #include "status.h"
 
+#define COLORED     0
+#define UNCOLORED   1
+
 Epd epd;
+unsigned char image[1024];
+Paint paint(image, 0, 0);
 
 void epaperSetup() {
     if (epd.Init(lut_full_update) != 0) {

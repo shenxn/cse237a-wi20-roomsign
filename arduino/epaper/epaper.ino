@@ -14,7 +14,9 @@ void setup() {
     radioConfigure();
 
     Serial.println(F("initial status fetch"));
-    radioFetch();
+    // radioFetch();
+    status.available = false;
+    status.updated = true;
     epaperDisplay();
 }
 

@@ -12,3 +12,4 @@
 !rpi
 
 arduino/epaper/imagedata.cpp
+arduino/epaper/font*.cpp
