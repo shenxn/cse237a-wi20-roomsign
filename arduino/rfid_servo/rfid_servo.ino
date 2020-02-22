@@ -44,7 +44,15 @@ void loop() {
   Serial.print("Message : ");
   content.toUpperCase();
 
-  // key tag: 89 7F 97 D5; card tag: B7 08 7B 44  
+  /*
+  key tag:    89 7F 97 D5
+              09 ED 19 B9
+              39 59 1A B9
+              39 D5 31 C2
+              59 C1 B4 C2
+              39 3B 2F C2
+  card tag:   B7 08 7B 44
+  */
   if (content.substring(1) == "89 7F 97 D5") {
     Serial.println("Authorized access");
     Serial.println();
