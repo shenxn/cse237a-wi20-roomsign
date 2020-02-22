@@ -1,5 +1,5 @@
 #ifndef STATUS_H
-#define STATSU
+#define STATUS_H
 
 struct Status {
     bool available;
