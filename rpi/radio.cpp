@@ -5,6 +5,7 @@
 #include <string>
 #include <unistd.h>
 #include <RF24/RF24.h>
+#include "request.h"
 
 using namespace std;
 //
@@ -80,22 +81,20 @@ int main(int argc, char** argv)
     while (1) {
         // if there is data ready
         if (radio.available()) {
-            // Dump the payloads until we've gotten everything
-            unsigned int op;
 
-            // Fetch the payload, and see if this was the last one.
-            while (radio.available()) {
-                radio.read(&op, sizeof(unsigned int));
-            }
+            // read request
+            Request request;
+            radio.read(&request, sizeof(Request));
             radio.stopListening();
 
+            // send response
             radio.write(&available, sizeof(unsigned int));
 
             // Now, resume listening so we catch the next packets.
             // radio.startListening();
 
             // Spew it
-            printf("Got payload %d\n", op);
+            printf("Request operation %d\n", request.operation);
             break;
 
             // delay(925); //Delay after payload responded to, minimize RPi CPU time

@@ -11,6 +11,8 @@
 !arduino/epaper
 !arduino/templates
 !rpi
+!common
 
 arduino/epaper/imagedata.cpp
 arduino/epaper/font*.cpp
+arduino/epaper/request.h

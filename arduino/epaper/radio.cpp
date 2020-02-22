@@ -3,6 +3,7 @@
 #include "radio.h"
 #include "printf.h"
 #include "status.h"
+#include "request.h"
 
 byte txAddress[] = "1Node";
 byte rxAddress[] = "2Node";
@@ -25,34 +26,14 @@ void radioConfigure() {
 }
 
 void radioFetch() {
-    while (1) {
-        radio.stopListening();
+    radio.stopListening();
 
-        // send signal
-        Serial.println(F("sending fetch signal"));
-        unsigned int op = OPERATION_FETCH;
-        radio.write(&op, sizeof(unsigned int));
+    // send signal
+    Serial.println(F("sending fetch signal"));
+    Request request = {OPERATION_FETCH};
+    radio.write(&request, sizeof(Request));
 
-        // get response
-        radio.startListening();
-        unsigned long startedWaitingAt = micros();
-        boolean timeout = false;
-        while (!radio.available()) {
-            if (micros() - startedWaitingAt > WAITING_TIMEOUT) {
-                timeout = true;
-                break;
-            }
-        }
-        if (timeout) {
-            Serial.println(F("failed - time out"));
-        } else {
-            radioRead();
-            return;
-        }
-        
-        // retry after 1 second
-        delay(1000);
-    }
+    radio.startListening();
 }
 
 void radioRead() {
