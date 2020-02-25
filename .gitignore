@@ -8,12 +8,12 @@
 !*.tpl
 !Makefile
 !arduino
-!arduino/epaper
+!arduino/roomsign
 !arduino/templates
 !arduino/rfid_servo
 !rpi
 !common
 
-arduino/epaper/imagedata.cpp
-arduino/epaper/font*.cpp
-arduino/epaper/request.h
+arduino/roomsign/imagedata.cpp
+arduino/roomsign/font*.cpp
+arduino/roomsign/request.h
