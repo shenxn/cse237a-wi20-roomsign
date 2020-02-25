@@ -16,4 +16,3 @@
 
 arduino/roomsign/imagedata.cpp
 arduino/roomsign/font*.cpp
-arduino/roomsign/request.h
