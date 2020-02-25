@@ -2,14 +2,14 @@
 #include <SPI.h>
 #include <MFRC522.h>
 
-#define RST_PIN         9
-#define SS_PIN          10
+#define RST_PIN         2
+#define SS_PIN          4
 
 MFRC522 mfrc522(SS_PIN, RST_PIN);
 Servo myServo;
 
 void setup() {
-  Serial.begin(9600);    // Initialize serial communications with the PC
+  Serial.begin(115200);    // Initialize serial communications with the PC
   while (!Serial);    // Do nothing if no serial port is opened (added for Arduinos based on ATMEGA32U4)
   SPI.begin();      // Init SPI bus
   mfrc522.PCD_Init();   // Init MFRC522

@@ -4,6 +4,11 @@
 struct Status {
     bool available;
     bool updated;
+
+    // access control
+    bool authorized;
+    bool unlocked;
+    unsigned int unlockTime;
 };
 
 extern Status status;
