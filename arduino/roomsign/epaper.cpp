@@ -43,12 +43,23 @@ void epaperDisplay() {
     if (status.available) {
         epd.SetFrameMemory(IMAGE_DATA_AVAILABLE);
         epd.DisplayFrame();
-        epd.SetFrameMemory(IMAGE_DATA_AVAILABLE);
-        epd.DisplayFrame();
+        // epd.SetFrameMemory(IMAGE_DATA_AVAILABLE);
+        // epd.DisplayFrame();
     } else {
         epd.SetFrameMemory(IMAGE_DATA_INUSE);
-        epd.DisplayFrame();
-        epd.SetFrameMemory(IMAGE_DATA_INUSE);
+        // epd.DisplayFrame();
+        // epd.SetFrameMemory(IMAGE_DATA_INUSE);
+        // epd.DisplayFrame();
+
+        paint.SetRotate(ROTATE_90);
+        paint.SetWidth(24);
+        paint.SetHeight(200);
+        paint.Clear(UNCOLORED);
+        paint.DrawStringAt(0, 4, status.name, &Font16, COLORED);
+        epd.SetFrameMemory(paint.GetImage(), 128-24-16-24, 104+16+8*5, paint.GetWidth(), paint.GetHeight());
+        paint.Clear(UNCOLORED);
+        paint.DrawStringAt(0, 4, status.time, &Font16, COLORED);
+        epd.SetFrameMemory(paint.GetImage(), 128-24-16-24*2, 104+16+8*5, paint.GetWidth(), paint.GetHeight());
         epd.DisplayFrame();
     }
 

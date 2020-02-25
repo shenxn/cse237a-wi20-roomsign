@@ -4,6 +4,7 @@
 #include "printf.h"
 #include "status.h"
 #include "request.h"
+#include "response.h"
 
 byte txAddress[] = "1Node";
 byte rxAddress[] = "2Node";
@@ -16,7 +17,9 @@ void radioConfigure() {
     radio.begin();
 
     // set the PA Level low to prevent power supply related issues
-    radio.setPALevel(RF24_PA_LOW);
+    // radio.setPALevel(RF24_PA_LOW);
+
+    radio.enableDynamicPayloads();
 
     radio.openWritingPipe(txAddress);
     radio.openReadingPipe(1, rxAddress);
@@ -38,11 +41,24 @@ void radioFetch() {
 
 void radioRead() {
     if (radio.available()) {
-        unsigned int available;
-        radio.read(&available, sizeof(unsigned int));
-        status.available = available;
+        Response response;
+        radio.read(&response, sizeof(Response));
+        status.available = response.available;
+        if (!status.available) {
+            strncpy(status.name, response.name, sizeof(status.name));
+            strncpy(status.time, response.time, sizeof(status.time));
+            status.name[sizeof(status.name) - 1] = '\0';  // prevent overflow
+            status.time[sizeof(status.time) - 1] = '\0';
+        }
         status.updated = true;
-        Serial.print(F("available: "));
-        Serial.println(available);
+        Serial.println(F("Got response:"));
+        Serial.print(F("\tsize: "));
+        Serial.println(sizeof(Response));
+        Serial.print(F("\tavailable: "));
+        Serial.println(status.available);
+        Serial.print(F("\tname: "));
+        Serial.println(response.name);
+        Serial.print(F("\ttime: "));
+        Serial.println(status.time);
     }
 }
