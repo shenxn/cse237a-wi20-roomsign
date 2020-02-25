@@ -3,4 +3,4 @@ uncolored = 1
 
 fontPath = 'UbuntuMono-R.ttf'
 
-outputPathPrefix = 'epaper'
+outputPathPrefix = 'roomsign'
