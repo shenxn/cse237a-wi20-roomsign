@@ -23,18 +23,17 @@
  * THE SOFTWARE.
  */
 
-#define WIDTH 296
-#define HEIGHT 128
-#define PADDING 16
-#define ROOM_NAME_HEIGHT 24
-#define STATUS_WIDTH 104
-#define DETAIL_PADDING 16
-#define DETAIL_LINE_HEIGHT 24
+#define WIDTH ${width}
+#define HEIGHT ${height}
+#define PADDING ${padding}
+#define ROOM_NAME_HEIGHT ${roomNameHeight}
+#define STATUS_WIDTH ${statusWidth}
+#define DETAIL_PADDING ${detailPadding}
+#define DETAIL_LINE_HEIGHT ${detailLineHeight}
 
 extern const unsigned char IMAGE_DATA_INUSE[];
 extern const unsigned char IMAGE_DATA_AVAILABLE[];
 
 /* FILE END */
-
 
 

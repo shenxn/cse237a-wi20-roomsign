@@ -16,6 +16,7 @@
 !common
 
 arduino/roomsign/imagedata.cpp
+arduino/roomsign/imagedata.h
 arduino/roomsign/font*.cpp
 secret.py
 server_secret.py

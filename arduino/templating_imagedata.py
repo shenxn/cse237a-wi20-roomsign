@@ -43,14 +43,6 @@ def genImageData(available):
         y = (height + roomNameHeight - statusFontSize) / 2
         draw.text((padding, y), statusInUse, font=fnt, fill=uncolored)
 
-        # detail
-        fnt = ImageFont.truetype(fontPath, detailFontSize)
-        x = statusWidth + detailPadding
-        y = (detailLineHeight - detailFontSize) / 2 + roomNameHeight + detailPadding
-        draw.text((x, y), 'BY', font=fnt)
-        y += detailLineHeight
-        draw.text((x, y), 'Time', font=fnt)
-
     imgData = np.array(img)
     imgDataStr = ''
     for i in range(width):
@@ -68,4 +60,18 @@ content = template.render(
     imgDataAvailable=genImageData(True)
 )
 with open(outputPathPrefix + '/imagedata.cpp', 'w') as f:
+    print(content, file=f)
+
+# imgdata.h
+template = Template(filename='templates/imagedata.h.tpl')
+content = template.render(
+    width=width,
+    height=height,
+    padding=padding,
+    roomNameHeight=roomNameHeight,
+    statusWidth=statusWidth,
+    detailPadding=detailPadding,
+    detailLineHeight=detailLineHeight
+)
+with open(outputPathPrefix + '/imagedata.h', 'w') as f:
     print(content, file=f)

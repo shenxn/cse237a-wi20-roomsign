@@ -8,7 +8,7 @@
 #define UNCOLORED   1
 
 Epd epd;
-unsigned char image[1024];
+unsigned char image[480];
 Paint paint(image, 0, 0);
 
 void epaperSetup() {
@@ -33,33 +33,39 @@ void epaperDisplay() {
     status.updated = false;
 
     Serial.print("display available: ");
-    Serial.println(status.available);
+    Serial.println(status.event.available);
 
     if (epd.Init(lut_full_update) != 0) {
         Serial.print("e-Paper init failed");
         return;
     }
 
-    if (status.available) {
+    if (status.event.available) {
         epd.SetFrameMemory(IMAGE_DATA_AVAILABLE);
         epd.DisplayFrame();
-        // epd.SetFrameMemory(IMAGE_DATA_AVAILABLE);
-        // epd.DisplayFrame();
     } else {
         epd.SetFrameMemory(IMAGE_DATA_INUSE);
-        // epd.DisplayFrame();
-        // epd.SetFrameMemory(IMAGE_DATA_INUSE);
-        // epd.DisplayFrame();
 
         paint.SetRotate(ROTATE_90);
         paint.SetWidth(24);
-        paint.SetHeight(200);
+        paint.SetHeight(160);
+
+        int x = HEIGHT - ROOM_NAME_HEIGHT - DETAIL_PADDING - DETAIL_LINE_HEIGHT;
+        int y = STATUS_WIDTH + DETAIL_PADDING;
         paint.Clear(UNCOLORED);
-        paint.DrawStringAt(0, 4, status.name, &Font16, COLORED);
-        epd.SetFrameMemory(paint.GetImage(), 128-24-16-24, 104+16+8*5, paint.GetWidth(), paint.GetHeight());
+        paint.DrawStringAt(0, 4, status.event.summary, &Font20, COLORED);
+        epd.SetFrameMemory(paint.GetImage(), x, y, paint.GetWidth(), paint.GetHeight());
+
+        x -= DETAIL_LINE_HEIGHT;
         paint.Clear(UNCOLORED);
-        paint.DrawStringAt(0, 4, status.time, &Font16, COLORED);
-        epd.SetFrameMemory(paint.GetImage(), 128-24-16-24*2, 104+16+8*5, paint.GetWidth(), paint.GetHeight());
+        paint.DrawStringAt(0, 4, status.event.time, &Font16, COLORED);
+        epd.SetFrameMemory(paint.GetImage(), x, y, paint.GetWidth(), paint.GetHeight());
+
+        x -= DETAIL_LINE_HEIGHT;
+        paint.Clear(UNCOLORED);
+        paint.DrawStringAt(0, 4, status.event.creator, &Font16, COLORED);
+        epd.SetFrameMemory(paint.GetImage(), x, y, paint.GetWidth(), paint.GetHeight());
+
         epd.DisplayFrame();
     }
 

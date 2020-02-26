@@ -7,15 +7,19 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from datetime import datetime
 from datetime import timedelta
 from RF24 import *
+from RF24Network import *
 import RPi.GPIO as GPIO
 import secret
 
+octlit = lambda n: int(n, 8)
+node_address = octlit("01")
+target_address = octlit("00")
+channel = 90
+
 server = 'https://cse237a-wi20-roomsign.sxn.dev/websocket'
-txAddress = 0xF0F0F0F0D2
-rxAddress = 0xF0F0F0F0E1
 summary_length = 21
 time_length = 21
-creator_length = 18
+creator_length = 21
 
 class Event:
     def __init__(self, raw_event):
@@ -35,18 +39,15 @@ class Event:
 
 class Radio:
     def __init__(self):
-        self.radio = RF24(22, 0)
+        self.radio = RF24(22, 0, BCM2835_SPI_SPEED_8MHZ)
+        self.network = RF24Network(self.radio)
 
     def init(self):
         print('initializing RF24')
         self.radio.begin()
-        self.radio.setRetries(15, 15)
-        self.radio.openWritingPipe(txAddress)
-        self.radio.openReadingPipe(1, rxAddress)
-        self.radio.enableDynamicPayloads()
+        time.sleep(0.1)
+        self.network.begin(channel, node_address)
         self.radio.printDetails()
-        self.radio.startListening()
-
 
     def build_bytes(self, s, length):
         b = bytes(s[:length-1], 'ascii')
@@ -54,16 +55,14 @@ class Radio:
             b += bytes([ord('\0')] * (length - len(b)))
         return b
 
-
     def time_to_str(self, event):
         s = event.start.strftime('%I:%M%p') + '-' + event.end.strftime('%I:%M%p')
         if event.end.date() > event.start.date():
             s += '+{}'.format((event.end.date() - event.start.date()).days)
         return s
 
-
     def send_data(self, event):
-        self.radio.stopListening()
+        self.network.update()
         if event is None:
             available = bytes([1])
             summary = self.build_bytes('', summary_length)
@@ -75,9 +74,12 @@ class Radio:
             time = self.build_bytes(self.time_to_str(event), time_length)
             creator = self.build_bytes(event.creator, creator_length)
         payload = available + summary + time + creator
-        print('sent (size={})'.format(len(payload)), payload)
-        self.radio.write(payload)
-        self.radio.startListening()
+        print('sending (size={})'.format(len(payload)), payload)
+        ok = self.network.write(RF24NetworkHeader(target_address), payload)
+        if ok:
+            print('ok.')
+        else:
+            print('failed.')
 
 
 class Client:
@@ -145,7 +147,7 @@ class Client:
             async with session.ws_connect(
                 url=server,
                 headers={'Authorization': 'Bearer ' + secret.WS_TOKEN},
-                timeout=0) as ws:
+                timeout=3600) as ws:
 
                 # wait data
                 async for msg in ws:
@@ -157,7 +159,7 @@ class Client:
                         print('new data received')
                         await self.parse_events(raw_events)
 
-            session.close()
+            await session.close()
         except Exception as e:
             traceback.print_tb(e.__traceback__)
             print(e)

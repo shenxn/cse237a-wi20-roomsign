@@ -1,12 +1,17 @@
 #ifndef STATUS_H
 #define STATUS_H
 
+struct Event {
+    char available;
+    char summary[21];
+    char time[21];
+    char creator[21];
+};
+
 struct Status {
-    bool available;
     bool updated;
 
-    char name[16];
-    char time[16];
+    Event event;
 
     // access control
     bool authorized;
