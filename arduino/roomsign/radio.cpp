@@ -1,16 +1,14 @@
+#include <Arduino.h>
 #include <SPI.h>
 #include <RF24.h>
-#include <RF24Network.h>
 #include "radio.h"
 #include "printf.h"
 #include "status.h"
 
-const uint8_t channel = 90;
-const uint64_t nodeAddress = 00;
-const uint64_t targetAddress = 01;
+const uint64_t rx_pipe = 0xF0F0F0F0E1;
+const uint64_t tx_pipe = 0xF0F0F0F0D2;
 
 RF24 radio(CE_PIN, CSN_PIN);
-RF24Network network(radio);
 
 void radioConfigure() {
     printf_begin();
@@ -20,28 +18,86 @@ void radioConfigure() {
     // set the PA Level low to prevent power supply related issues
     // radio.setPALevel(RF24_PA_LOW);
 
-    network.begin(channel, nodeAddress);
-
-    // radio.printDetails();
+    radio.setAutoAck(1);
+    radio.enableDynamicPayloads();
+    radio.setRetries(0, 15);
+    radio.openWritingPipe(tx_pipe);
+    radio.openReadingPipe(1, rx_pipe);
+    radio.startListening();
+    radio.printDetails();
 }
 
 void radioFetch() {
-    // radio.stopListening();
+    radio.stopListening();
 
-    // // send signal
-    // Serial.println(F("sending fetch signal"));
-    // Request request = {OPERATION_FETCH};
-    // radio.write(&request, sizeof(Request));
+    // send signal
+    Serial.println(F("sending fetch signal"));
+    Request request = {OPERATION_FETCH};
+    bool succeed = false;
+    int count = 0;
+    while (!succeed) {
+        if (radio.write(&request, sizeof(Request))) {
+            succeed = true;
+            Serial.println(F("\tok"));
+        } else {
+            Serial.println(F("\tfail"));
+            ++count;
+            if (count == 10) {  // try at most 10 times
+                Serial.println(F("\tgive up"));
+            }
+            delay(1000);  // retry after one second
+        }
+    }
 
-    // radio.startListening();
+    radio.startListening();
 }
 
 void radioRead() {
-    network.update();
+    if (radio.available()) {
+        Serial.println(F("receiving data"));
+        char buffer[sizeof(Event)];
+        uint8_t buffer_size = 0;
+        while (true) {  // reading multiple packets
+            uint8_t len = radio.getDynamicPayloadSize();
 
-    if (network.available()) {
-        RF24NetworkHeader header;
-        network.read(header, &status.event, sizeof(Event));
+            // If a corrupt dynamic payload is received, it will be flushed
+            if(!len){
+                continue; 
+            }
+
+            char payload[len];
+            radio.read(payload, len);
+            Serial.print(F("\treceived payload of size "));
+            Serial.println(len);
+
+            if (buffer_size + len > sizeof(Event)) {
+                // error check to avoid segfault
+                Serial.println(F("\tfail, data error"));
+                return;  // failed to read the radio
+            }
+            memcpy(buffer+buffer_size, payload, len);
+            buffer_size += len;
+            if (buffer_size == sizeof(Event)) {
+                Serial.println(F("\tok"));
+                break;
+            }
+
+            unsigned long started_waiting_at = millis();
+            bool timeout = false;
+            while (!radio.available() && !timeout) {
+                if (millis() - started_waiting_at > WAITING_TIMEOUT) {
+                    timeout = true;
+                }
+            }
+
+            if (timeout) {
+                Serial.println(F("\tfail, timeout"));
+                return;  // failed to read the radio
+            }
+        }
+        
+        // flush buffer
+        memcpy((char*)&status.event, buffer, sizeof(Event));
         status.updated = true;
         Serial.println(F("got response:"));
         Serial.print(F("\tavailable: "));

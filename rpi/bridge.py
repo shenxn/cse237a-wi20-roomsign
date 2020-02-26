@@ -7,14 +7,16 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from datetime import datetime
 from datetime import timedelta
 from RF24 import *
-from RF24Network import *
 import RPi.GPIO as GPIO
 import secret
 
-octlit = lambda n: int(n, 8)
-node_address = octlit("01")
-target_address = octlit("00")
-channel = 90
+CE_PIN = 22
+CSN_PIN = 0
+IRQ_PIN = 23
+
+tx_pipe = 0xF0F0F0F0E1
+rx_pipe = 0xF0F0F0F0D2
+payload_size = 32
 
 server = 'https://cse237a-wi20-roomsign.sxn.dev/websocket'
 summary_length = 21
@@ -39,15 +41,36 @@ class Event:
 
 class Radio:
     def __init__(self):
-        self.radio = RF24(22, 0, BCM2835_SPI_SPEED_8MHZ)
-        self.network = RF24Network(self.radio)
+        self.radio = RF24(CE_PIN, CSN_PIN, BCM2835_SPI_SPEED_8MHZ)
+        self.payload = None
 
     def init(self):
         print('initializing RF24')
         self.radio.begin()
-        time.sleep(0.1)
-        self.network.begin(channel, node_address)
+        self.radio.setAutoAck(1)
+        self.radio.setRetries(0, 15)
+        self.radio.enableDynamicPayloads()
+        self.radio.openWritingPipe(tx_pipe)
+        self.radio.openReadingPipe(1, rx_pipe)
+
+        # setup interrupt
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(IRQ_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+        GPIO.add_event_detect(IRQ_PIN, GPIO.FALLING, callback=self.interrupt_handler)
+
         self.radio.printDetails()
+        self.radio.startListening()
+
+    def interrupt_handler(self, channel=0):
+        if self.radio.available():
+            print('interrupt!')
+            operation = self.radio.read(1)
+            if operation[0] == 1:
+                # OPERATION_FETCH
+                self.send_payload()
+            else:
+                print('unknown operation', operation)
+
 
     def build_bytes(self, s, length):
         b = bytes(s[:length-1], 'ascii')
@@ -61,28 +84,38 @@ class Radio:
             s += '+{}'.format((event.end.date() - event.start.date()).days)
         return s
 
+    def send_payload(self):
+        self.radio.stopListening()
+        print('sending (size={})'.format(len(self.payload)), self.payload)
+        succeed = False
+        while not succeed:
+            succeed = True
+            for i in range(0, len(self.payload), payload_size):
+                if (not self.radio.write(self.payload[i:i+payload_size])):
+                    print('failed')
+                    succeed = False
+                    time.sleep(1)  # retry after 1 second
+                    break
+        self.radio.startListening()
+
     def send_data(self, event):
-        self.network.update()
+        # generate payload
         if event is None:
-            available = bytes([1])
+            available = b'\x01'
             summary = self.build_bytes('', summary_length)
             time = self.build_bytes('', time_length)
             creator = self.build_bytes('', time_length)
         else:
-            available = bytes([0])
+            available = b'\x00'
             summary = self.build_bytes(event.summary, summary_length)
             time = self.build_bytes(self.time_to_str(event), time_length)
             creator = self.build_bytes(event.creator, creator_length)
-        payload = available + summary + time + creator
-        print('sending (size={})'.format(len(payload)), payload)
-        ok = self.network.write(RF24NetworkHeader(target_address), payload)
-        if ok:
-            print('ok.')
-        else:
-            print('failed.')
+        self.payload = available + summary + time + creator
+
+        self.send_payload()
 
 
-class Client:
+class Bridge:
     def __init__(self):
         self.events = []
         self.curr_event = None
@@ -172,4 +205,4 @@ class Client:
 
 
 if __name__ == '__main__':
-    Client().main()
+    Bridge().main()
