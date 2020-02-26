@@ -146,19 +146,18 @@ class Client:
             session = aiohttp.ClientSession()
             async with session.ws_connect(
                 url=server,
-                headers={'Authorization': 'Bearer ' + secret.WS_TOKEN},
-                timeout=3600) as ws:
+                headers={'Authorization': 'Bearer ' + secret.WS_TOKEN}) as ws:
 
-                # wait data
-                async for msg in ws:
-                    if msg.type == aiohttp.WSMsgType.ERROR:
-                        print('ws connection closed with exception', ws.exception())
-                        break
-                    elif msg.type == aiohttp.WSMsgType.TEXT:
-                        raw_events = json.loads(msg.data)
-                        print('new data received')
-                        await self.parse_events(raw_events)
-
+                # block
+                while True:
+                    async for msg in ws:
+                        if msg.type == aiohttp.WSMsgType.ERROR:
+                            print('ws connection closed with exception', ws.exception())
+                            break
+                        elif msg.type == aiohttp.WSMsgType.TEXT:
+                            raw_events = json.loads(msg.data)
+                            print('new data received')
+                            await self.parse_events(raw_events)
             await session.close()
         except Exception as e:
             traceback.print_tb(e.__traceback__)
