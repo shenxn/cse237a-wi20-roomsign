@@ -13,8 +13,9 @@ import secret
 server = 'https://cse237a-wi20-roomsign.sxn.dev/websocket'
 txAddress = 0xF0F0F0F0D2
 rxAddress = 0xF0F0F0F0E1
-summary_length = 16
-time_length = 16
+summary_length = 21
+time_length = 21
+creator_length = 18
 
 class Event:
     def __init__(self, raw_event):
@@ -48,7 +49,7 @@ class Radio:
 
 
     def build_bytes(self, s, length):
-        b = bytes(s[:length], 'ascii')
+        b = bytes(s[:length-1], 'ascii')
         if len(b) < length:
             b += bytes([ord('\0')] * (length - len(b)))
         return b
@@ -67,11 +68,13 @@ class Radio:
             available = bytes([1])
             summary = self.build_bytes('', summary_length)
             time = self.build_bytes('', time_length)
+            creator = self.build_bytes('', time_length)
         else:
             available = bytes([0])
             summary = self.build_bytes(event.summary, summary_length)
             time = self.build_bytes(self.time_to_str(event), time_length)
-        payload = available + summary + time
+            creator = self.build_bytes(event.creator, creator_length)
+        payload = available + summary + time + creator
         print('sent (size={})'.format(len(payload)), payload)
         self.radio.write(payload)
         self.radio.startListening()
@@ -122,7 +125,8 @@ class Client:
                 self.radio.send_data(self.curr_event)
             if self.scheduler_job is not None:
                 self.scheduler_job.remove()
-            self.scheduler.add_job(self.update_curr_event, 'date', run_date=next_event_time)   
+            if next_event_time is not None:
+                self.scheduler.add_job(self.update_curr_event, 'date', run_date=next_event_time)   
 
 
     async def parse_events(self, raw_events):
@@ -140,7 +144,8 @@ class Client:
             session = aiohttp.ClientSession()
             async with session.ws_connect(
                 url=server,
-                headers={'Authorization': 'Bearer ' + secret.WS_TOKEN}) as ws:
+                headers={'Authorization': 'Bearer ' + secret.WS_TOKEN},
+                timeout=0) as ws:
 
                 # wait data
                 async for msg in ws:
@@ -151,6 +156,8 @@ class Client:
                         raw_events = json.loads(msg.data)
                         print('new data received')
                         await self.parse_events(raw_events)
+
+            session.close()
         except Exception as e:
             traceback.print_tb(e.__traceback__)
             print(e)

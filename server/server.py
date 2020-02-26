@@ -17,13 +17,16 @@ class Server:
         self.ws = None
         self.ws_lock = asyncio.Lock()
         self.lock = asyncio.Lock()
+        self.last_data = None
 
-    async def get_send(self):
+    async def get_send(self, refresh):
         # get events from Google Calendar API and send through websocket
 
         async with self.lock:
-            events = google_api.get_events()
-            await self.ws.send_str(json.dumps(events))
+            if not refresh or self.last_data is None:
+                events = google_api.get_events()
+                self.last_data = events
+            await self.ws.send_str(self.last_data)
             print('data sent')
 
     async def websocket_handler(self, request):
@@ -43,7 +46,7 @@ class Server:
             await ws.prepare(request)
             self.ws = ws
 
-        await self.get_send()
+        await self.get_send(refresh=False)
 
         # block wait
         async for msg in ws:
@@ -57,7 +60,7 @@ class Server:
         if self.ws is None:
             return web.HTTPOk()
         # TODO check incoming traffic
-        await self.get_send()
+        await self.get_send(refresh=True)
         return web.HTTPOk()
 
     def main(self):
