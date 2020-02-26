@@ -14,8 +14,8 @@ RF24 radio(22, 0);
 
 #define INT_PIN 23
 
-const uint8_t txAddress[] = "2Node";
-const uint8_t rxAddress[] = "1Node";
+const uint64_t txAddress = 0xF0F0F0F0E1;
+const uint64_t rxAddress = 0xF0F0F0F0D2;
 
 Response response;
 
@@ -79,15 +79,14 @@ int main(int argc, char** argv)
     // Setup and configure rf radio
     radio.begin();
 
-    // optionally, increase the delay between retries & # of retries
     radio.setRetries(15, 15);
-    // Dump the configuration of the rf unit for debugging
-    radio.printDetails();
 
     radio.openWritingPipe(txAddress);
     radio.openReadingPipe(1, rxAddress);
     
     radio.enableDynamicPayloads();
+
+    radio.printDetails();
 
     radio.startListening();
 

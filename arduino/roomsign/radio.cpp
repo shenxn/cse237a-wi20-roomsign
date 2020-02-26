@@ -6,8 +6,8 @@
 #include "request.h"
 #include "response.h"
 
-byte txAddress[] = "1Node";
-byte rxAddress[] = "2Node";
+const uint64_t txAddress = 0xF0F0F0F0E1;
+const uint64_t rxAddress = 0xF0F0F0F0D2;
 
 RF24 radio(CE_PIN, CSN_PIN);
 
@@ -51,7 +51,7 @@ void radioRead() {
             status.time[sizeof(status.time) - 1] = '\0';
         }
         status.updated = true;
-        Serial.println(F("Got response:"));
+        Serial.println(F("got response:"));
         Serial.print(F("\tsize: "));
         Serial.println(sizeof(Response));
         Serial.print(F("\tavailable: "));

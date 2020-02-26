@@ -11,8 +11,10 @@
 !arduino/roomsign
 !arduino/templates
 !arduino/rfid_servo
+!server
 !rpi
 !common
 
 arduino/roomsign/imagedata.cpp
 arduino/roomsign/font*.cpp
+secret.py
