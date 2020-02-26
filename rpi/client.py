@@ -1,6 +1,6 @@
 import traceback
 import asyncio
-import websockets
+import aiohttp
 import json
 import time
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -10,7 +10,7 @@ from RF24 import *
 import RPi.GPIO as GPIO
 import secret
 
-server = "ws://192.168.1.12:13251"
+server = 'https://cse237a-wi20-roomsign.sxn.dev/websocket'
 txAddress = 0xF0F0F0F0D2
 rxAddress = 0xF0F0F0F0E1
 summary_length = 16
@@ -25,7 +25,10 @@ class Event:
         self.start = self.start.replace(tzinfo=None)
         self.end = self.end.replace(tzinfo=None)
 
-        self.summary = raw_event['summary']
+        if 'summary' in raw_event:
+            self.summary = raw_event['summary']
+        else:
+            self.summary = '(No title)'
         self.creator = raw_event['creator']['email']
 
 
@@ -134,16 +137,20 @@ class Client:
 
     async def client(self):
         try:
-            async with websockets.connect(
-                server,
-                extra_headers={'Token': secret.WS_TOKEN}
-                ) as ws:
+            session = aiohttp.ClientSession()
+            async with session.ws_connect(
+                url=server,
+                headers={'Authorization': 'Bearer ' + secret.WS_TOKEN}) as ws:
 
                 # wait data
-                while True:
-                    raw_events = json.loads(await ws.recv())
-                    print('new data received')
-                    await self.parse_events(raw_events)
+                async for msg in ws:
+                    if msg.type == aiohttp.WSMsgType.ERROR:
+                        print('ws connection closed with exception', ws.exception())
+                        break
+                    elif msg.type == aiohttp.WSMsgType.TEXT:
+                        raw_events = json.loads(msg.data)
+                        print('new data received')
+                        await self.parse_events(raw_events)
         except Exception as e:
             traceback.print_tb(e.__traceback__)
             print(e)

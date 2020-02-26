@@ -1,6 +1,7 @@
 import asyncio
-import websockets
 from http import HTTPStatus
+import aiohttp
+from aiohttp import web
 import json
 import google_api
 import config
@@ -11,30 +12,68 @@ async def ws_authenticate(path, request_headers):
     if 'Token' not in request_headers or request_headers['Token'] != secret.WS_TOKEN:
         return (HTTPStatus.FORBIDDEN, {}, b'')
 
+class Server:
+    def __init__(self):
+        self.ws = None
+        self.ws_lock = asyncio.Lock()
+        self.lock = asyncio.Lock()
 
-async def ws_handler(ws, path):
-    try:
-        # send initial data
-        events = google_api.get_events()
-        await ws.send(json.dumps(events))
-        print('initial data sent')
+    async def get_send(self):
+        # get events from Google Calendar API and send through websocket
+
+        async with self.lock:
+            events = google_api.get_events()
+            await self.ws.send_str(json.dumps(events))
+            print('data sent')
+
+    async def websocket_handler(self, request):
+        async with self.ws_lock:
+            if (self.ws is not None):
+                # support only one websocket connection
+                await self.ws.close()
+            
+            # authentication
+            if not 'Authorization' in request.headers:
+                return web.HTTPUnauthorized()
+
+            if request.headers['Authorization'] != 'Bearer ' + secret.WS_TOKEN:
+                return web.HTTPForbidden()
+
+            ws = web.WebSocketResponse()
+            await ws.prepare(request)
+            self.ws = ws
+
+        await self.get_send()
 
         # block wait
-        msg = await ws.recv()
+        async for msg in ws:
+            if msg.type == aiohttp.WSMsgType.ERROR:
+                print('ws connection closed with exception', ws.exception())
+        
+        self.ws = None
+        return ws
 
-    except websockets.exceptions.ConnectionClosedOK:
-        print('connection closed')
+    async def webhook_handler(self, request):
+        if self.ws is None:
+            return web.HTTPOk()
+        # TODO check incoming traffic
+        await self.get_send()
+        return web.HTTPOk()
 
+    def main(self):
+        google_api.init()
 
-
-def main():
-    google_api.init()
-
-    print('starting server')
-    server = websockets.serve(ws_handler, port=config.PORT, process_request=ws_authenticate)
-    asyncio.get_event_loop().run_until_complete(server)
-    asyncio.get_event_loop().run_forever()
+        print('starting server')
+        app = web.Application()
+        app.add_routes([
+            web.post('/webhook', self.webhook_handler),
+            web.get('/websocket', self.websocket_handler)
+        ])
+        web.run_app(app, port=config.PORT)
+        # server = websockets.serve(ws_handler, port=config.PORT, process_request=ws_authenticate)
+        # asyncio.get_event_loop().run_until_complete(server)
+        # asyncio.get_event_loop().run_forever()
 
 
 if __name__ == '__main__':
-    main()
+    Server().main()

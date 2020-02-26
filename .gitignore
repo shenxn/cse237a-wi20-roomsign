@@ -18,3 +18,4 @@
 arduino/roomsign/imagedata.cpp
 arduino/roomsign/font*.cpp
 secret.py
+server_secret.py
