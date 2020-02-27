@@ -17,7 +17,7 @@ struct Status {
     // access control
     bool authorized;
     bool unlocked;
-    unsigned int unlockTime;
+    unsigned long unlock_time;
 };
 
 extern Status status;

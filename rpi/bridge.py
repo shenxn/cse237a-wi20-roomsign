@@ -137,7 +137,6 @@ class Bridge:
         self.scheduler.start()
         self.scheduler_job = None
 
-
     def compare_events(self, e1, e2):
         if e1 is None and e2 is None:
             return True
@@ -145,6 +144,9 @@ class Bridge:
             return False
         return e1.start == e2.start and e1.end == e2.end and e1.summary == e2.summary and e1.creator == e2.creator
 
+    async def job_handler(self):
+        self.scheduler_job = None
+        await self.update_curr_event()
 
     async def update_curr_event(self):
         async with self.events_lock:
@@ -168,8 +170,9 @@ class Bridge:
                 self.radio.send_data(self.curr_event)
             if self.scheduler_job is not None:
                 self.scheduler_job.remove()
+                self.scheduler_job = None
             if next_event_time is not None:
-                self.scheduler_job = self.scheduler.add_job(self.update_curr_event, 'date', run_date=next_event_time)   
+                self.scheduler_job = self.scheduler.add_job(self.job_handler, 'date', run_date=next_event_time)   
 
 
     async def parse_events(self, raw_events):

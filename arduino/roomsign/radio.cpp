@@ -4,7 +4,6 @@
 #include "radio.h"
 #include "printf.h"
 #include "status.h"
-#include "serial.h"
 
 const uint64_t rx_pipe = 0xF0F0F0F0E1;
 const uint64_t tx_pipe = 0xF0F0F0F0D2;
@@ -124,8 +123,10 @@ void radioRead() {
         Serial.println(status.event.time);
         Serial.print(F("\tcreator: "));
         Serial.println(status.event.creator);
-
-        // send key id through serial
-        serialWrite();
+        Serial.print(F("\tkey id: "));
+        for (int i = 0; i < sizeof(status.event.key_id); ++i) {
+            Serial.print((uint8_t)status.event.key_id[i], HEX);
+        }
+        Serial.println();
     }
 }
