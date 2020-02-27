@@ -33,8 +33,8 @@ def templatingFont(fontSize, width):
     with open('%s/font%d.cpp' % (outputPathPrefix, fontSize), 'w') as f:
         print(content, file=f)
 
-templatingFont(8, 4)
-templatingFont(12, 6)
+# templatingFont(8, 4)
+# templatingFont(12, 6)
 templatingFont(16, 8)
 templatingFont(20, 10)
 templatingFont(24, 12)

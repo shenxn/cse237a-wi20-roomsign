@@ -56,8 +56,8 @@ struct sFONT {
 extern sFONT Font24;
 extern sFONT Font20;
 extern sFONT Font16;
-extern sFONT Font12;
-extern sFONT Font8;
+// extern sFONT Font12;
+// extern sFONT Font8;
 
 #endif /* __FONTS_H */
  
