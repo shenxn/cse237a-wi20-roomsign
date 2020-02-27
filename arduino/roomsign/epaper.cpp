@@ -17,6 +17,8 @@ void epaperSetup() {
         return;
     }
 
+    Serial.println("Finish init");
+
     epd.ClearFrameMemory(0xFF);
     epd.DisplayFrame();
     epd.ClearFrameMemory(0xFF);
@@ -35,10 +37,11 @@ void epaperDisplay() {
     Serial.print("display available: ");
     Serial.println((int)status.event.available);
 
-    if (epd.Init(lut_full_update) != 0) {
-        Serial.print("e-Paper init failed");
-        return;
-    }
+    // if (epd.Init(lut_full_update) != 0) {
+    //     Serial.print("e-Paper init failed");
+    //     return;
+    // }
+    epd.Reset();
 
     if (status.event.available) {
         epd.SetFrameMemory(IMAGE_DATA_AVAILABLE);

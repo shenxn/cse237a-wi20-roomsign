@@ -5,11 +5,11 @@
 #include "serial.h"
 
 void setup() {
-    Serial.begin(115200);
+    Serial.begin(9600);
     Serial.println(F("starting"));
 
-    // Serial.println(F("setup epaper"));
-    // epaperSetup();
+    Serial.println(F("setup epaper"));
+    epaperSetup();
 
     Serial.println(F("setup radio"));
     radioConfigure();
@@ -25,6 +25,6 @@ void setup() {
 void loop() {
     serialRead();
     radioRead();
-    // epaperDisplay();
-    delay(500);
+    epaperDisplay();
+    delay(1000);
 }
