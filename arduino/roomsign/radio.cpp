@@ -4,6 +4,7 @@
 #include "radio.h"
 #include "printf.h"
 #include "status.h"
+#include "serial.h"
 
 const uint64_t rx_pipe = 0xF0F0F0F0E1;
 const uint64_t tx_pipe = 0xF0F0F0F0D2;
@@ -28,29 +29,41 @@ void radioConfigure() {
 }
 
 void radioFetch() {
-    radio.stopListening();
-
     // send signal
     Serial.println(F("sending fetch signal"));
     Request request = {OPERATION_FETCH};
-    bool succeed = false;
     int count = 0;
-    while (!succeed) {
+    while (true) {
+        radio.stopListening();
         if (radio.write(&request, sizeof(Request))) {
-            succeed = true;
             Serial.println(F("\tok"));
+
+            // wait for response
+            radio.startListening();
+            Serial.println(F("\twait for response"));
+            unsigned long started_waiting_at = millis();
+            bool timeout = false;
+            while (!radio.available() && !timeout) {
+                if (millis() - started_waiting_at > WAITING_TIMEOUT) {
+                    timeout = true;
+                }
+            }
+            if (timeout) {
+                Serial.println(F("\ttimeout"));
+            } else {
+                break;  // succeed
+            }
         } else {
             Serial.println(F("\tfail"));
-            ++count;
-            if (count == 10) {  // try at most 10 times
-                Serial.println(F("\tgive up"));
-                break;
-            }
-            delay(1000);  // retry after one second
         }
+        ++count;
+        if (count == 10) {  // try at most 10 times
+            Serial.println(F("\tgive up"));
+            break;
+        }
+        delay(1000);  // retry after one second
     }
 
-    radio.startListening();
 }
 
 void radioRead() {
@@ -109,5 +122,8 @@ void radioRead() {
         Serial.println(status.event.time);
         Serial.print(F("\tcreator: "));
         Serial.println(status.event.creator);
+
+        // send key id through serial
+        serialWrite();
     }
 }

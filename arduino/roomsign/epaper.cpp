@@ -33,7 +33,7 @@ void epaperDisplay() {
     status.updated = false;
 
     Serial.print("display available: ");
-    Serial.println(status.event.available);
+    Serial.println((int)status.event.available);
 
     if (epd.Init(lut_full_update) != 0) {
         Serial.print("e-Paper init failed");

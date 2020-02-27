@@ -6,6 +6,7 @@ struct Event {
     char summary[21];
     char time[21];
     char creator[21];
+    char key_id[4];
 };
 
 struct Status {

@@ -9,6 +9,7 @@ from datetime import timedelta
 from RF24 import *
 import RPi.GPIO as GPIO
 import secret
+from users import users
 
 CE_PIN = 22
 CSN_PIN = 0
@@ -22,6 +23,7 @@ server = 'https://cse237a-wi20-roomsign.sxn.dev/websocket'
 summary_length = 21
 time_length = 21
 creator_length = 21
+key_length = 4
 
 class Event:
     def __init__(self, raw_event):
@@ -36,6 +38,7 @@ class Event:
             self.summary = raw_event['summary']
         else:
             self.summary = '(No title)'
+
         self.creator = raw_event['creator']['email']
 
 
@@ -105,12 +108,15 @@ class Radio:
             summary = self.build_bytes('', summary_length)
             time = self.build_bytes('', time_length)
             creator = self.build_bytes('', time_length)
+            key_id = self.build_bytes('', key_length)
         else:
             available = b'\x00'
             summary = self.build_bytes(event.summary, summary_length)
             time = self.build_bytes(self.time_to_str(event), time_length)
-            creator = self.build_bytes(event.creator, creator_length)
-        self.payload = available + summary + time + creator
+            if event.creator in users:
+                creator = self.build_bytes(users[event.creator]['name'], creator_length)
+                key_id = bytes(users[event.creator]['key_id'])
+        self.payload = available + summary + time + creator + key_id
 
         self.send_payload()
 

@@ -3,7 +3,7 @@
 
 #define CE_PIN 5
 #define CSN_PIN 6
-#define WAITING_TIMEOUT 500000  // 500 ms
+#define WAITING_TIMEOUT 2000
 
 #define OPERATION_FETCH 1
 

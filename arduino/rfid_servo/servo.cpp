@@ -15,14 +15,14 @@ void servoSetup() {
 void servoUnlock() {
     if (status.authorized) {
         status.authorized = false;
-        status.unlockTime = millis();
+        status.unlock_time = millis();
         if (!status.unlocked) {
             Serial.println(F("servo unlocking"));
             status.unlocked = true;
             servo.write(SERVO_UNLOCK);
         }
     } else if (status.unlocked) {
-        if (millis() - status.unlockTime > SERVO_DELAY) {
+        if (millis() - status.unlock_time > SERVO_DELAY) {
             Serial.println(F("servo locking"));
             status.unlocked = false;
             servo.write(SERVO_LOCK);

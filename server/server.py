@@ -23,9 +23,9 @@ class Server:
         # get events from Google Calendar API and send through websocket
 
         async with self.lock:
-            if not refresh or self.last_data is None:
+            if refresh or self.last_data is None:
                 events = google_api.get_events()
-                self.last_data = events
+                self.last_data = json.dumps(events)
             await self.ws.send_str(self.last_data)
             print('data sent')
 
