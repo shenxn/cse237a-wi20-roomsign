@@ -167,7 +167,7 @@ class Bridge:
             if self.scheduler_job is not None:
                 self.scheduler_job.remove()
             if next_event_time is not None:
-                self.scheduler.add_job(self.update_curr_event, 'date', run_date=next_event_time)   
+                self.scheduler_job = self.scheduler.add_job(self.update_curr_event, 'date', run_date=next_event_time)   
 
 
     async def parse_events(self, raw_events):
