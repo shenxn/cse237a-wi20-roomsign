@@ -35,7 +35,7 @@ void rfidRead() {
         }
     }
 
-    if (match) {
+    if ((uint8_t)status.event.available || match) {
         Serial.println(F(" granted"));
         status.authorized = true;
     } else {

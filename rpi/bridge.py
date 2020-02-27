@@ -97,8 +97,8 @@ class Radio:
             for i in range(0, len(self.payload), payload_size):
                 if (not self.radio.write(self.payload[i:i+payload_size])):
                     print('failed')
-                    succeed = False
-                    time.sleep(1)  # retry after 1 second
+                    # succeed = False
+                    # time.sleep(1)  # retry after 1 second
                     succeed = True # force exit
                     break
         self.radio.startListening()

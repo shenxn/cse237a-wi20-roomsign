@@ -17,8 +17,6 @@ void epaperSetup() {
         return;
     }
 
-    Serial.println("Finish init");
-
     epd.ClearFrameMemory(0xFF);
     epd.DisplayFrame();
     epd.ClearFrameMemory(0xFF);
