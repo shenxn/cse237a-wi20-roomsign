@@ -25,8 +25,8 @@ class Server:
         async with self.lock:
             if refresh or self.last_data is None:
                 events = google_api.get_events()
-                self.last_data = json.dumps(events)
-            await self.ws.send_str(self.last_data)
+                self.last_data = events
+            await self.ws.send_json(self.last_data)
             print('data sent')
 
     async def websocket_handler(self, request):
@@ -48,15 +48,16 @@ class Server:
 
         await self.get_send(refresh=False)
 
-        # block wait
-        async for msg in ws:
-            if msg.type == aiohttp.WSMsgType.ERROR:
-                print('ws connection closed with exception', ws.exception())
+        # ping peer
+        while True:
+            await asyncio.sleep(10)
+            await ws.ping()
         
         self.ws = None
         return ws
 
     async def webhook_handler(self, request):
+        print("webhook triggered")
         if self.ws is None:
             return web.HTTPOk()
         # TODO check incoming traffic

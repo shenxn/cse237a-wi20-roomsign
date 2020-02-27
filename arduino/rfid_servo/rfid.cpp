@@ -26,7 +26,7 @@ void rfidRead() {
     }
 
     //Show UID on serial monitor
-    Serial.print(F("UID tag:"));
+    Serial.print(F("UID tag: "));
     bool match = true;
     for (byte i = 0; i < mfrc522.uid.size; i++) {
         Serial.print(mfrc522.uid.uidByte[i], HEX);
