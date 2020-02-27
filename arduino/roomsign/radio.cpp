@@ -8,7 +8,7 @@
 const uint64_t rx_pipe = 0xF0F0F0F0E1;
 const uint64_t tx_pipe = 0xF0F0F0F0D2;
 
-RF24 radio(CE_PIN, CSN_PIN);
+RF24 radio(RADIO_CE_PIN, RADIO_CSN_PIN);
 
 void radioConfigure() {
     printf_begin();
@@ -56,13 +56,13 @@ void radioFetch() {
             }
         } else {
             Serial.println(F("\tfail"));
+            delay(1000);  // retry after one second
         }
         ++count;
         if (count == 10) {  // try at most 10 times
             Serial.println(F("\tgive up"));
             break;
         }
-        delay(1000);  // retry after one second
     }
 
 }

@@ -46,6 +46,7 @@ class Radio:
     def __init__(self):
         self.radio = RF24(CE_PIN, CSN_PIN, BCM2835_SPI_SPEED_8MHZ)
         self.payload = None
+        self.payload_sent = False
 
     def init(self):
         print('initializing RF24')
@@ -89,18 +90,19 @@ class Radio:
         return s
 
     def send_payload(self):
-        self.radio.stopListening()
         print('sending (size={})'.format(len(self.payload)), self.payload)
-        succeed = False
-        while not succeed:
-            succeed = True
+        self.payload_sent = False  # only one success is needed
+        while not self.payload_sent:
+            self.payload_sent = True
+            self.radio.stopListening()
             for i in range(0, len(self.payload), payload_size):
                 if (not self.radio.write(self.payload[i:i+payload_size])):
                     print('failed')
-                    # succeed = False
-                    # time.sleep(1)  # retry after 1 second
-                    succeed = True # force exit
+                    self.payload_sent = False
+                    self.radio.startListening()
+                    time.sleep(1)  # retry after 1 second
                     break
+        print('ok')
         self.radio.startListening()
 
     def send_data(self, event):
