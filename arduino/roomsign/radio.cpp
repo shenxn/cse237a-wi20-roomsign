@@ -44,6 +44,7 @@ void radioFetch() {
             ++count;
             if (count == 10) {  // try at most 10 times
                 Serial.println(F("\tgive up"));
+                break;
             }
             delay(1000);  // retry after one second
         }
