@@ -50,8 +50,9 @@ class Radio:
     def init(self):
         print('initializing RF24')
         self.radio.begin()
+        self.radio.setDataRate(RF24_250KBPS)
         self.radio.setAutoAck(1)
-        self.radio.setRetries(0, 15)
+        self.radio.setRetries(15, 15)
         self.radio.enableDynamicPayloads()
         self.radio.openWritingPipe(tx_pipe)
         self.radio.openReadingPipe(1, rx_pipe)
@@ -98,6 +99,7 @@ class Radio:
                     print('failed')
                     succeed = False
                     time.sleep(1)  # retry after 1 second
+                    succeed = True # force exit
                     break
         self.radio.startListening()
 

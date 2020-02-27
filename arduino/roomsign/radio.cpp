@@ -19,9 +19,11 @@ void radioConfigure() {
     // set the PA Level low to prevent power supply related issues
     // radio.setPALevel(RF24_PA_LOW);
 
+    radio.setDataRate(RF24_250KBPS);
+
     radio.setAutoAck(1);
     radio.enableDynamicPayloads();
-    radio.setRetries(0, 15);
+    radio.setRetries(15, 15);
     radio.openWritingPipe(tx_pipe);
     radio.openReadingPipe(1, rx_pipe);
     radio.startListening();
