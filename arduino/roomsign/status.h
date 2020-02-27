@@ -3,9 +3,9 @@
 
 struct Event {
     char available;
-    char summary[21];
+    char summary[17];
     char time[21];
-    char creator[21];
+    char creator[18];
     char key_id[4];
 };
 

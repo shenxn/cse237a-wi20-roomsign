@@ -68,9 +68,21 @@ void epaperDrawTemplate(bool available) {
         }
         paint.DrawStringAt(PADDING, 0, "IN USE", &STATUS_FONT, UNCOLORED);
         epd.SetFrameMemory(
-             paint.GetImage(),
+            paint.GetImage(),
             (HEIGHT - ROOM_NAME_HEIGHT - STATUS_FONT.Height) / 2,
             0,
+            paint.GetWidth(),
+            paint.GetHeight()
+        );
+
+        paint.SetWidth(DETAIL_LINE_HEIGHT);
+        paint.SetHeight(2 * DETAIL_FONT.Width);
+        paint.Clear(UNCOLORED);
+        paint.DrawStringAt(0, (DETAIL_LINE_HEIGHT - DETAIL_FONT.Height) / 2, "BY", &DETAIL_FONT, COLORED);
+        epd.SetFrameMemory(
+            paint.GetImage(),
+            HEIGHT - ROOM_NAME_HEIGHT - DETAIL_PADDING - 3 * DETAIL_LINE_HEIGHT,
+            STATUS_WIDTH + DETAIL_PADDING,
             paint.GetWidth(),
             paint.GetHeight()
         );
@@ -115,23 +127,25 @@ void epaperDisplay() {
         epaperDrawTemplate(false);
 
         paint.SetRotate(ROTATE_90);
-        paint.SetWidth(24);
-        paint.SetHeight(160);
+        paint.SetWidth(DETAIL_LINE_HEIGHT);
+        paint.SetHeight(DETAIL_LINE_WIDTH);
 
         int x = HEIGHT - ROOM_NAME_HEIGHT - DETAIL_PADDING - DETAIL_LINE_HEIGHT;
         int y = STATUS_WIDTH + DETAIL_PADDING;
         paint.Clear(UNCOLORED);
-        paint.DrawStringAt(0, 4, status.event.summary, &Font20, COLORED);
+        paint.DrawStringAt(0, 0, status.event.summary, &SUMMARY_FONT, COLORED);
         epd.SetFrameMemory(paint.GetImage(), x, y, paint.GetWidth(), paint.GetHeight());
 
         x -= DETAIL_LINE_HEIGHT;
         paint.Clear(UNCOLORED);
-        paint.DrawStringAt(0, 4, status.event.time, &Font16, COLORED);
+        paint.DrawStringAt(0, (DETAIL_LINE_HEIGHT - DETAIL_FONT.Height) / 2, status.event.time, &DETAIL_FONT, COLORED);
         epd.SetFrameMemory(paint.GetImage(), x, y, paint.GetWidth(), paint.GetHeight());
 
         x -= DETAIL_LINE_HEIGHT;
+        y += 3 * DETAIL_FONT.Width;
+        paint.SetHeight(DETAIL_LINE_WIDTH - 3 * DETAIL_FONT.Width);
         paint.Clear(UNCOLORED);
-        paint.DrawStringAt(0, 4, status.event.creator, &Font16, COLORED);
+        paint.DrawStringAt(0, (DETAIL_LINE_HEIGHT - DETAIL_FONT.Height) / 2, status.event.creator, &DETAIL_FONT, COLORED);
         epd.SetFrameMemory(paint.GetImage(), x, y, paint.GetWidth(), paint.GetHeight());
 
         epd.DisplayFrame();

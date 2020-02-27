@@ -14,8 +14,11 @@
 #define ROOM_NAME_FONT Font20
 #define STATUS_WIDTH 104
 #define STATUS_FONT Font24
+#define SUMMARY_FONT Font20
 #define DETAIL_PADDING 16
 #define DETAIL_LINE_HEIGHT 24
+#define DETAIL_LINE_WIDTH 160
+#define DETAIL_FONT Font16
 
 void epaperSetup();
 

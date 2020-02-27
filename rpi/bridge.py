@@ -20,9 +20,9 @@ rx_pipe = 0xF0F0F0F0D2
 payload_size = 32
 
 server = 'https://cse237a-wi20-roomsign.sxn.dev/websocket'
-summary_length = 21
+summary_length = 17
 time_length = 21
-creator_length = 21
+creator_length = 18
 key_length = 4
 
 class Event:
@@ -86,7 +86,7 @@ class Radio:
     def time_to_str(self, event):
         s = event.start.strftime('%I:%M%p') + '-' + event.end.strftime('%I:%M%p')
         if event.end.date() > event.start.date():
-            s += '+{}'.format((event.end.date() - event.start.date()).days)
+            s += '+{}D'.format((event.end.date() - event.start.date()).days)
         return s
 
     def send_payload(self):

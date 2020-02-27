@@ -56,7 +56,11 @@ void radioFetch() {
             }
         } else {
             Serial.println(F("\tfail"));
+            radio.startListening();
             delay(1000);  // retry after one second
+            if (radio.available()) {
+                break;  // got radio
+            }
         }
         ++count;
         if (count == 10) {  // try at most 10 times
@@ -64,11 +68,10 @@ void radioFetch() {
             break;
         }
     }
-
 }
 
 void radioRead() {
-    if (radio.available()) {
+    while (radio.available()) {
         Serial.println(F("receiving data"));
         char buffer[sizeof(Event)];
         uint8_t buffer_size = 0;
