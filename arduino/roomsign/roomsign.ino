@@ -7,6 +7,7 @@
 #include "servo.h"
 #include "epdif.h"
 #include "macro.h"
+#include "sleep.h"
 
 void setup() {
 #ifdef DEBUG
@@ -17,6 +18,7 @@ void setup() {
     // turn off not used things
     ADCSRA = 0;  // disable ADC
     power_adc_disable();
+    power_twi_disable();
 
     // set all SS pins to high to prevent SPI conflict
     pinMode(RFID_SS_PIN, OUTPUT);
@@ -38,10 +40,15 @@ void setup() {
     // should be after epaper
     SERIAL_PRINTLN(F("setup radio"));
     radioConfigure();
+
+    // reset clock
+    status.clock = 0;
 }
 
 void loop() {
+    ++status.clock;
+    radioRead();
     rfidRead();
     servoUnlock();
-    delay(1000);
+    sleep();
 }

@@ -12,36 +12,41 @@ void rfidInit() {
     mfrc522.PCD_Init();
     mfrc522.PCD_DumpVersionToSerial();
     status.authorized = false;
+
+    // sleep RFID
+    mfrc522.PCD_SoftPowerDown();
 }
 
 
 void rfidRead() {
-    // Reset the loop if no new card present on the sensor/reader. This saves the entire process when idle.
-    if ( ! mfrc522.PICC_IsNewCardPresent()) {
-        return;
-    }
+    mfrc522.PCD_SoftPowerUp();
 
-    // Select one of the cards
-    if ( ! mfrc522.PICC_ReadCardSerial()) {
-        return;
-    }
+    if (mfrc522.PICC_IsNewCardPresent() && mfrc522.PICC_ReadCardSerial()) {
 
-    //Show UID on serial monitor
-    SERIAL_PRINT(F("UID tag: "));
-    bool match = true;
-    for (byte i = 0; i < mfrc522.uid.size; i++) {
-#ifdef DEBUG
-        Serial.print(mfrc522.uid.uidByte[i], HEX);
-#endif
-        if (i >= sizeof(status.event.key_id) || mfrc522.uid.uidByte[i] != (uint8_t)status.event.key_id[i]) {
-            match = false;
+        bool match = true;
+        
+        // check ID only when not available
+        if (!(uint8_t)status.event.available) {
+            //Show UID on serial monitor
+            SERIAL_PRINT(F("UID tag: "));
+            for (byte i = 0; i < mfrc522.uid.size; i++) {
+        #ifdef DEBUG
+                Serial.print(mfrc522.uid.uidByte[i], HEX);
+        #endif
+                if (i >= sizeof(status.event.key_id) || mfrc522.uid.uidByte[i] != (uint8_t)status.event.key_id[i]) {
+                    match = false;
+                }
+            }
+            SERIAL_PRINT(F(" "));
+        }
+
+        if (match) {
+            SERIAL_PRINTLN(F("granted"));
+            status.authorized = true;
+        } else {
+            SERIAL_PRINTLN(F("denied"));
         }
     }
 
-    if ((uint8_t)status.event.available || match) {
-        SERIAL_PRINTLN(F(" granted"));
-        status.authorized = true;
-    } else {
-        SERIAL_PRINTLN(F(" denied"));
-    }
+    mfrc522.PCD_SoftPowerDown();
 }

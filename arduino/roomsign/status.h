@@ -14,6 +14,8 @@ struct Status {
 
     Event event;
 
+    unsigned long clock;
+
     // access control
     bool authorized;
     bool unlocked;

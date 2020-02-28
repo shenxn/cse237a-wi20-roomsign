@@ -6,6 +6,7 @@
 #include "status.h"
 #include "epaper.h"
 #include "macro.h"
+#include "sleep.h"
 
 const uint64_t rx_pipe = 0xF0F0F0F0E1;
 const uint64_t tx_pipe = 0xF0F0F0F0D2;
@@ -34,10 +35,10 @@ void radioConfigure() {
     radioFetch();
 
     // setup interrupt
-    pinMode(RADIO_IRQ_PIN, INPUT);
-    radio.maskIRQ(true, true, false);  // only interrupt with rx
-    attachInterrupt(digitalPinToInterrupt(RADIO_IRQ_PIN), radioRead, FALLING);
-    radioRead();  // read existed data
+    // pinMode(RADIO_IRQ_PIN, INPUT_PULLUP);
+    // radio.maskIRQ(true, true, false);  // only interrupt with rx
+    // attachInterrupt(digitalPinToInterrupt(RADIO_IRQ_PIN), radioRead, FALLING);
+    // radioRead();  // read existed data
 }
 
 void radioFetch() {
@@ -152,4 +153,7 @@ void radioRead() {
     while (radio.available()) {
         _read();
     }
+
+    // go back to sleep
+    // sleep();
 }
