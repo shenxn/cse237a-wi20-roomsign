@@ -4,6 +4,7 @@
 #include "radio.h"
 #include "printf.h"
 #include "status.h"
+#include "epaper.h"
 
 const uint64_t rx_pipe = 0xF0F0F0F0E1;
 const uint64_t tx_pipe = 0xF0F0F0F0D2;
@@ -27,6 +28,15 @@ void radioConfigure() {
     radio.openReadingPipe(1, rx_pipe);
     radio.startListening();
     radio.printDetails();
+
+    // initial fetch
+    radioFetch();
+
+    // setup interrupt
+    pinMode(RADIO_IRQ_PIN, INPUT);
+    radio.maskIRQ(true, true, false);  // only interrupt with rx
+    attachInterrupt(digitalPinToInterrupt(RADIO_IRQ_PIN), radioRead, FALLING);
+    radioRead();  // read existed data
 }
 
 void radioFetch() {
@@ -70,66 +80,73 @@ void radioFetch() {
     }
 }
 
+void _read() {
+    Serial.println(F("receiving data"));
+    char buffer[sizeof(Event)];
+    uint8_t buffer_size = 0;
+    while (true) {  // reading multiple packets
+        uint8_t len = radio.getDynamicPayloadSize();
+
+        // If a corrupt dynamic payload is received, it will be flushed
+        if(!len){
+            continue; 
+        }
+
+        char payload[len];
+        radio.read(payload, len);
+        Serial.print(F("\treceived payload of size "));
+        Serial.println(len);
+
+        if (buffer_size + len > sizeof(Event)) {
+            // error check to avoid segfault
+            Serial.println(F("\tfail, data error"));
+            return;  // failed to read the radio
+        }
+        memcpy(buffer+buffer_size, payload, len);
+        buffer_size += len;
+        if (buffer_size == sizeof(Event)) {
+            Serial.println(F("\tok"));
+            break;
+        }
+
+        unsigned long started_waiting_at = millis();
+        bool timeout = false;
+        while (!radio.available() && !timeout) {
+            if (millis() - started_waiting_at > WAITING_TIMEOUT) {
+                timeout = true;
+            }
+        }
+
+        if (timeout) {
+            Serial.println(F("\tfail, timeout"));
+            return;  // failed to read the radio
+        }
+    }
+    
+    // flush buffer
+    memcpy((char*)&status.event, buffer, sizeof(Event));
+    status.updated = true;
+    Serial.println(F("got response:"));
+    Serial.print(F("\tavailable: "));
+    Serial.println((int)status.event.available);
+    Serial.print(F("\tsummary: "));
+    Serial.println(status.event.summary);
+    Serial.print(F("\ttime: "));
+    Serial.println(status.event.time);
+    Serial.print(F("\tcreator: "));
+    Serial.println(status.event.creator);
+    Serial.print(F("\tkey id: "));
+    for (int i = 0; i < sizeof(status.event.key_id); ++i) {
+        Serial.print((uint8_t)status.event.key_id[i], HEX);
+    }
+    Serial.println();
+    delay(500);  // wait for serial write to finish
+
+    epaperDisplay();  // update display
+}
+
 void radioRead() {
     while (radio.available()) {
-        Serial.println(F("receiving data"));
-        char buffer[sizeof(Event)];
-        uint8_t buffer_size = 0;
-        while (true) {  // reading multiple packets
-            uint8_t len = radio.getDynamicPayloadSize();
-
-            // If a corrupt dynamic payload is received, it will be flushed
-            if(!len){
-                continue; 
-            }
-
-            char payload[len];
-            radio.read(payload, len);
-            Serial.print(F("\treceived payload of size "));
-            Serial.println(len);
-
-            if (buffer_size + len > sizeof(Event)) {
-                // error check to avoid segfault
-                Serial.println(F("\tfail, data error"));
-                return;  // failed to read the radio
-            }
-            memcpy(buffer+buffer_size, payload, len);
-            buffer_size += len;
-            if (buffer_size == sizeof(Event)) {
-                Serial.println(F("\tok"));
-                break;
-            }
-
-            unsigned long started_waiting_at = millis();
-            bool timeout = false;
-            while (!radio.available() && !timeout) {
-                if (millis() - started_waiting_at > WAITING_TIMEOUT) {
-                    timeout = true;
-                }
-            }
-
-            if (timeout) {
-                Serial.println(F("\tfail, timeout"));
-                return;  // failed to read the radio
-            }
-        }
-        
-        // flush buffer
-        memcpy((char*)&status.event, buffer, sizeof(Event));
-        status.updated = true;
-        Serial.println(F("got response:"));
-        Serial.print(F("\tavailable: "));
-        Serial.println((int)status.event.available);
-        Serial.print(F("\tsummary: "));
-        Serial.println(status.event.summary);
-        Serial.print(F("\ttime: "));
-        Serial.println(status.event.time);
-        Serial.print(F("\tcreator: "));
-        Serial.println(status.event.creator);
-        Serial.print(F("\tkey id: "));
-        for (int i = 0; i < sizeof(status.event.key_id); ++i) {
-            Serial.print((uint8_t)status.event.key_id[i], HEX);
-        }
-        Serial.println();
+        _read();
     }
 }

@@ -21,23 +21,18 @@ void setup() {
     Serial.println(F("setup rfid"));
     rfidInit();
 
-    Serial.println(F("setup epaper"));
-    epaperSetup();
-
-    Serial.println(F("setup radio"));
-    radioConfigure();
-
     Serial.println(F("setup servo"));
     servoSetup();
 
-    Serial.println(F("initial status fetch"));
-    radioFetch();
-    epaperDisplay();
+    Serial.println(F("setup epaper"));
+    epaperSetup();
+
+    // should be after epaper
+    Serial.println(F("setup radio"));
+    radioConfigure();
 }
 
 void loop() {
-    radioRead();
-    epaperDisplay();
     rfidRead();
     servoUnlock();
     delay(1000);

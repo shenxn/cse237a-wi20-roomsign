@@ -111,7 +111,7 @@ class Radio:
             available = b'\x01'
             summary = self.build_bytes('', summary_length)
             time = self.build_bytes('', time_length)
-            creator = self.build_bytes('', time_length)
+            creator = self.build_bytes('', creator_length)
             key_id = self.build_bytes('', key_length)
         else:
             available = b'\x00'
