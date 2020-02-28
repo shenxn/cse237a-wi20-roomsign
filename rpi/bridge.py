@@ -20,10 +20,8 @@ rx_pipe = 0xF0F0F0F0D2
 payload_size = 32
 
 server = 'https://cse237a-wi20-roomsign.sxn.dev/websocket'
-summary_length = 17
-time_length = 21
-creator_length = 18
-key_length = 4
+summary_length = 16
+creator_length = 17
 
 class Event:
     def __init__(self, raw_event):
@@ -51,14 +49,15 @@ class Radio:
     def init(self):
         print('initializing RF24')
         self.radio.begin()
-        self.radio.setDataRate(RF24_250KBPS)
+        # self.radio.setDataRate(RF24_250KBPS)
         self.radio.setAutoAck(1)
-        self.radio.setRetries(15, 15)
+        self.radio.setRetries(5, 15)
         self.radio.enableDynamicPayloads()
         self.radio.openWritingPipe(tx_pipe)
         self.radio.openReadingPipe(1, rx_pipe)
 
         # setup interrupt
+        self.radio.maskIRQ(True, True, False)
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(IRQ_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
         GPIO.add_event_detect(IRQ_PIN, GPIO.FALLING, callback=self.interrupt_handler)
@@ -67,62 +66,93 @@ class Radio:
         self.radio.startListening()
 
     def interrupt_handler(self, channel=0):
-        if self.radio.available():
-            print('interrupt!')
-            operation = self.radio.read(1)
-            if operation[0] == 1:
-                # OPERATION_FETCH
+        while self.radio.available():
+            print('interrupt')
+            command = self.radio.read(1)
+            if command[0] == 0:
                 self.send_payload()
             else:
-                print('unknown operation', operation)
-
-
-    def build_bytes(self, s, length):
-        b = bytes(s[:length-1], 'ascii')
-        if len(b) < length:
-            b += bytes([ord('\0')] * (length - len(b)))
-        return b
-
-    def time_to_str(self, event):
-        s = event.start.strftime('%I:%M%p') + '-' + event.end.strftime('%I:%M%p')
-        if event.end.date() > event.start.date():
-            s += '+{}D'.format((event.end.date() - event.start.date()).days)
-        return s
+                print('unknown command', command[0])
 
     def send_payload(self):
-        print('sending (size={})'.format(len(self.payload)), self.payload)
+        if self.payload is None:
+            return
+        print(datetime.now().strftime('%H:%m:%S'))
+        print('send data')
         self.payload_sent = False  # only one success is needed
-        while not self.payload_sent:
-            self.payload_sent = True
+        count = 0
+        while not self.payload_sent and count < 5:
             self.radio.stopListening()
-            for i in range(0, len(self.payload), payload_size):
-                if (not self.radio.write(self.payload[i:i+payload_size])):
-                    print('failed')
-                    self.payload_sent = False
-                    self.radio.startListening()
-                    time.sleep(1)  # retry after 1 second
-                    break
-        print('ok')
+            if self.radio.write(self.payload):
+                self.payload_sent = True
+            else:
+                print('failed')
+                self.payload_sent = False
+                self.radio.startListening()  # open for interrupts
+                count += 1
+                time.sleep(1)  # retry after 1 second
+        if self.payload_sent:
+            print('\tok')
+        else:
+            print('\tgive up')
         self.radio.startListening()
 
-    def send_data(self, event):
-        # generate payload
-        if event is None:
-            available = b'\x01'
-            summary = self.build_bytes('', summary_length)
-            time = self.build_bytes('', time_length)
-            creator = self.build_bytes('', creator_length)
-            key_id = self.build_bytes('', key_length)
-        else:
-            available = b'\x00'
-            summary = self.build_bytes(event.summary, summary_length)
-            time = self.build_bytes(self.time_to_str(event), time_length)
-            if event.creator in users:
-                creator = self.build_bytes(users[event.creator]['name'], creator_length)
-                key_id = bytes(users[event.creator]['key_id'])
-        self.payload = available + summary + time + creator + key_id
+    def int_to_bits(self, v, length):
+        bits = []
+        for i in range(length):
+            bits.append(v % 2)
+            v //= 2
+        bits.reverse()
+        return bits
 
-        self.send_payload()
+    def str_to_bits(self, s, length):
+        bits = []
+        for c in s[:length]:
+            asc = ord(c)
+            if asc >= 48 and asc <= 57:  # 0-9
+                v = asc - 48 + 2
+            elif asc >= 65 and asc <= 90:  # A-Z
+                v = asc - 65 + 2 + 10
+            elif asc >= 97 and asc <= 122:  # a-z
+                v = asc - 97 + 2 + 10 + 26
+            else:  # space or other (treated as space)
+                v = 1
+            bits += self.int_to_bits(v, 6)
+        if len(s) < length:
+            bits += [0] * 6 * (length - len(s))
+        return bits
+
+    def time_to_bits(self, event):
+        start = event.start.hour * 60 + event.start.minute
+        end = event.end.hour * 60 + event.end.minute
+        return self.int_to_bits(start, 11) + self.int_to_bits(end, 11)
+
+    def bytes_to_bits(self, byte_arr):
+        bits = []
+        for i in byte_arr:
+            bits += self.int_to_bits(i, 8)
+        return bits  
+
+    def gen_payload(self, event):
+        if event is None:
+            bits = [1]
+        else:
+            bits = [0]
+            bits += self.str_to_bits(event.summary, summary_length)
+            bits += self.time_to_bits(event)
+            if event.creator in users:
+                bits += self.str_to_bits(users[event.creator]['name'], creator_length)
+                bits += self.bytes_to_bits(users[event.creator]['key_id'])
+        if len(bits) < 256:
+            bits += [0] * (256 - len(bits))
+        payload = []
+        for i in range(0, 256, 8):
+            b = 0
+            for j in range(8):
+                b = b * 2 + bits[i + j]
+            payload.append(b)
+        print('new data ({} bytes)'.format(len(payload)), payload)
+        self.payload = bytes(payload)
 
 
 class Bridge:
@@ -169,7 +199,7 @@ class Bridge:
                     self.radio.init()
                 self.curr_event = new_curr_event
                 print('curr_event updated')
-                self.radio.send_data(self.curr_event)
+                self.radio.gen_payload(self.curr_event)
             if self.scheduler_job is not None:
                 self.scheduler_job.remove()
                 self.scheduler_job = None

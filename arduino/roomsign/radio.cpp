@@ -21,11 +21,11 @@ void radioConfigure() {
     // set the PA Level low to prevent power supply related issues
     // radio.setPALevel(RF24_PA_LOW);
 
-    radio.setDataRate(RF24_250KBPS);
+    // radio.setDataRate(RF24_250KBPS);
 
     radio.setAutoAck(1);
     radio.enableDynamicPayloads();
-    radio.setRetries(15, 15);
+    radio.setRetries(5, 15);
     radio.openWritingPipe(tx_pipe);
     radio.openReadingPipe(1, rx_pipe);
     radio.startListening();
@@ -33,127 +33,157 @@ void radioConfigure() {
 
     // initial fetch
     radioFetch();
-
-    // setup interrupt
-    // pinMode(RADIO_IRQ_PIN, INPUT_PULLUP);
-    // radio.maskIRQ(true, true, false);  // only interrupt with rx
-    // attachInterrupt(digitalPinToInterrupt(RADIO_IRQ_PIN), radioRead, FALLING);
-    // radioRead();  // read existed data
 }
 
 void radioFetch() {
+    radio.powerUp();
     // send signal
-    SERIAL_PRINTLN(F("sending fetch signal"));
-    Request request = {OPERATION_FETCH};
-    int count = 0;
-    while (true) {
-        radio.stopListening();
-        if (radio.write(&request, sizeof(Request))) {
-            SERIAL_PRINTLN(F("\tok"));
-
-            // wait for response
-            radio.startListening();
-            SERIAL_PRINTLN(F("\twait for response"));
-            unsigned long started_waiting_at = millis();
-            bool timeout = false;
-            while (!radio.available() && !timeout) {
-                if (millis() - started_waiting_at > WAITING_TIMEOUT) {
-                    timeout = true;
-                }
-            }
-            if (timeout) {
-                SERIAL_PRINTLN(F("\ttimeout"));
-            } else {
-                break;  // succeed
-            }
-        } else {
-            SERIAL_PRINTLN(F("\tfail"));
-            radio.startListening();
-            delay(1000);  // retry after one second
-            if (radio.available()) {
-                break;  // got radio
-            }
-        }
-        ++count;
-        if (count == 10) {  // try at most 10 times
-            SERIAL_PRINTLN(F("\tgive up"));
-            break;
-        }
-    }
-}
-
-void _read() {
-    SERIAL_PRINTLN(F("receiving data"));
-    char buffer[sizeof(Event)];
-    uint8_t buffer_size = 0;
-    while (true) {  // reading multiple packets
-        uint8_t len = radio.getDynamicPayloadSize();
-
-        // If a corrupt dynamic payload is received, it will be flushed
-        if(!len){
-            continue; 
-        }
-
-        char payload[len];
-        radio.read(payload, len);
-        SERIAL_PRINT(F("\treceived payload of size "));
-        SERIAL_PRINTLN(len);
-
-        if (buffer_size + len > sizeof(Event)) {
-            // error check to avoid segfault
-            SERIAL_PRINTLN(F("\tfail, data error"));
-            return;  // failed to read the radio
-        }
-        memcpy(buffer+buffer_size, payload, len);
-        buffer_size += len;
-        if (buffer_size == sizeof(Event)) {
-            SERIAL_PRINTLN(F("\tok"));
-            break;
-        }
-
+    radio.stopListening();
+    SERIAL_PRINT(F("sending signal"));
+    byte payload = 0;
+    if (radio.write(&payload, 1)) {
+        radio.startListening();
+        SERIAL_PRINTLN(F("\tok, wait for response"));
         unsigned long started_waiting_at = millis();
         bool timeout = false;
-        while (!radio.available() && !timeout) {
+        while (!timeout && !radio.available()) {
             if (millis() - started_waiting_at > WAITING_TIMEOUT) {
                 timeout = true;
             }
         }
-
         if (timeout) {
-            SERIAL_PRINTLN(F("\tfail, timeout"));
-            return;  // failed to read the radio
+            SERIAL_PRINTLN(F("\ttimeout"));
+        } else {
+            radioRead();
+        }
+        radio.stopListening();
+    } else {
+        SERIAL_PRINTLN(F("\tfail"));
+    }
+    radio.powerDown();
+    epaperDisplay();
+}
+
+uint32_t bits_to_int(byte *bits, int len) {
+    int v = 0;
+    for (int i = 0; i < len; i++) {
+        v = (v << 1) + bits[i];
+    }
+    return v;
+}
+
+char bits_to_char(byte *bits) {
+    uint32_t v = bits_to_int(bits, 6);
+    if (v == 0) return '\0';
+    if (v == 1) return ' ';
+    if (v >= 2 && v < 10 + 2) return v - 2 + '0';
+    if (v >= 10 + 2 && v < 10 + 2 + 26) return v - 2 - 10 + 'A';
+    return v - 2 - 10 - 26 + 'a';
+}
+
+void bits_to_str(char *target, byte *bits, int len) {
+    for (int i = 0; i < len - 1; i++) {
+        target[i] = bits_to_char(bits);
+        bits += 6;
+    }
+    target[len - 1] = '\0';
+    return;
+}
+
+void bits_to_time(char *target, byte *bits) {
+    for (int i = 0; i < 2; i++) {
+        int v = bits_to_int(bits, 11);
+        int hour = v / 60;
+        int hour12 = v % 12;
+        int minute = v % 60;
+        sprintf(target, "%02d:%02d%s", hour12, minute, (hour / 12 ? "AM" : "PM"));
+        bits += 11;
+        target += 7;
+        if (i == 0) {
+            target[0] = '-';
+            ++target;
         }
     }
-    
-    // flush buffer
-    memcpy((char*)&status.event, buffer, sizeof(Event));
-    status.updated = true;
-#ifdef DEBUG
-    Serial.println(F("got response:"));
-    Serial.print(F("\tavailable: "));
-    Serial.println((int)status.event.available);
-    Serial.print(F("\tsummary: "));
-    Serial.println(status.event.summary);
-    Serial.print(F("\ttime: "));
-    Serial.println(status.event.time);
-    Serial.print(F("\tcreator: "));
-    Serial.println(status.event.creator);
-    Serial.print(F("\tkey id: "));
-    for (int i = 0; i < sizeof(status.event.key_id); ++i) {
-        Serial.print((uint8_t)status.event.key_id[i], HEX);
-    }
-    Serial.println();
-    delay(500);  // wait for serial write to finish
-#endif
-
-    epaperDisplay();  // update display
 }
 
 void radioRead() {
     while (radio.available()) {
-        _read();
-    }
+        SERIAL_PRINTLN(F("receiving data"));
+        uint8_t len = radio.getDynamicPayloadSize();
 
-    // go back to sleep
-    // sleep();
+        // If a corrupt dynamic payload is received, it will be flushed
+        if(!len){
+            continue;
+                continue; 
+            continue;
+        }
+
+        byte payload[32];
+        radio.read(payload, len);
+        SERIAL_PRINT(F("\treceived payload of size "));
+        SERIAL_PRINTLN(len);
+
+        if (len != 32) {
+            SERIAL_PRINTLN(F("\tfail, error data"));
+            continue;
+        }
+        
+        SERIAL_PRINTLN(F("\tok"));
+
+        // check for update
+        bool equal = true;
+        for (int i = 0; i < 32; ++i) {
+            if (payload[i] != status.last_payload[i]) {
+                equal = false;
+                break;
+            }
+        }
+        if (equal) {
+            SERIAL_PRINTLN(F("\tno change"));
+            continue;
+        }
+        memcpy(status.last_payload, payload, 32);
+        
+        // decode payload
+        byte bits[256];
+        for (int i = 0; i < 32; ++i) {
+            for (int j = 7; j >= 0; --j) {
+                bits[(i << 3) + j] = payload[i] & 1;
+                payload[i] >>= 1;
+            }
+        }
+        Event decoded;
+        uint8_t offset = 0;
+        decoded.available = bits[0];
+        offset += 1;
+        bits_to_str(decoded.summary, bits + offset, sizeof(decoded.summary));
+        offset += 6 * (sizeof(decoded.summary) - 1);
+        bits_to_time(decoded.time, bits + offset);
+        offset += 2 * 11;
+        bits_to_str(decoded.creator, bits + offset, sizeof(decoded.creator));
+        offset += 6 * (sizeof(decoded.creator) - 1);
+        for (int i = 0; i < sizeof(decoded.key_id); i++) {
+            decoded.key_id[i] = bits_to_int(bits + offset, 8);
+            offset += 8;
+        }
+
+        memcpy(&status.event, &decoded, sizeof(Event));
+        status.updated = true;
+#ifdef DEBUG
+        Serial.println(F("got response:"));
+        Serial.print(F("\tavailable: "));
+        Serial.println(status.event.available);
+        Serial.print(F("\tsummary: "));
+        Serial.println(status.event.summary);
+        Serial.print(F("\ttime: "));
+        Serial.println(status.event.time);
+        Serial.print(F("\tcreator: "));
+        Serial.println(status.event.creator);
+        Serial.print(F("\tkey id: "));
+        for (int i = 0; i < sizeof(status.event.key_id); ++i) {
+            Serial.print((uint8_t)status.event.key_id[i], HEX);
+        }
+        Serial.println();
+#endif
+    }
 }

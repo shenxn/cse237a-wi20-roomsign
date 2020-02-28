@@ -11,7 +11,7 @@
 
 void setup() {
 #ifdef DEBUG
-    Serial.begin(9600);
+    Serial.begin(19200);
     Serial.println(F("starting"));
 #endif
 
@@ -47,7 +47,9 @@ void setup() {
 
 void loop() {
     ++status.clock;
-    radioRead();
+    if (status.clock % RADIO_CHECK_INTERVAL == 0) {
+        radioFetch();
+    }
     rfidRead();
     servoUnlock();
     sleep();

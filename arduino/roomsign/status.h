@@ -1,18 +1,22 @@
 #ifndef STATUS_H
 #define STATUS_H
 
+#include <Arduino.h>
+
 struct Event {
-    char available;
+    byte available;
     char summary[17];
     char time[21];
     char creator[18];
-    char key_id[4];
+    byte key_id[4];
 };
 
 struct Status {
     bool updated;
 
     Event event;
+
+    byte last_payload[32];
 
     unsigned long clock;
 

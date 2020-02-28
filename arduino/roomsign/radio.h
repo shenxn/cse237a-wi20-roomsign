@@ -5,12 +5,7 @@
 #define RADIO_CSN_PIN A1
 #define RADIO_IRQ_PIN 2
 #define WAITING_TIMEOUT 5000
-
-#define OPERATION_FETCH 1
-
-struct Request {
-    char operation;
-};
+#define RADIO_CHECK_INTERVAL 10
 
 void radioConfigure();
 void radioFetch();
