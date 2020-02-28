@@ -5,6 +5,7 @@
 #include "printf.h"
 #include "status.h"
 #include "epaper.h"
+#include "macro.h"
 
 const uint64_t rx_pipe = 0xF0F0F0F0E1;
 const uint64_t tx_pipe = 0xF0F0F0F0D2;
@@ -41,17 +42,17 @@ void radioConfigure() {
 
 void radioFetch() {
     // send signal
-    Serial.println(F("sending fetch signal"));
+    SERIAL_PRINTLN(F("sending fetch signal"));
     Request request = {OPERATION_FETCH};
     int count = 0;
     while (true) {
         radio.stopListening();
         if (radio.write(&request, sizeof(Request))) {
-            Serial.println(F("\tok"));
+            SERIAL_PRINTLN(F("\tok"));
 
             // wait for response
             radio.startListening();
-            Serial.println(F("\twait for response"));
+            SERIAL_PRINTLN(F("\twait for response"));
             unsigned long started_waiting_at = millis();
             bool timeout = false;
             while (!radio.available() && !timeout) {
@@ -60,12 +61,12 @@ void radioFetch() {
                 }
             }
             if (timeout) {
-                Serial.println(F("\ttimeout"));
+                SERIAL_PRINTLN(F("\ttimeout"));
             } else {
                 break;  // succeed
             }
         } else {
-            Serial.println(F("\tfail"));
+            SERIAL_PRINTLN(F("\tfail"));
             radio.startListening();
             delay(1000);  // retry after one second
             if (radio.available()) {
@@ -74,14 +75,14 @@ void radioFetch() {
         }
         ++count;
         if (count == 10) {  // try at most 10 times
-            Serial.println(F("\tgive up"));
+            SERIAL_PRINTLN(F("\tgive up"));
             break;
         }
     }
 }
 
 void _read() {
-    Serial.println(F("receiving data"));
+    SERIAL_PRINTLN(F("receiving data"));
     char buffer[sizeof(Event)];
     uint8_t buffer_size = 0;
     while (true) {  // reading multiple packets
@@ -94,18 +95,18 @@ void _read() {
 
         char payload[len];
         radio.read(payload, len);
-        Serial.print(F("\treceived payload of size "));
-        Serial.println(len);
+        SERIAL_PRINT(F("\treceived payload of size "));
+        SERIAL_PRINTLN(len);
 
         if (buffer_size + len > sizeof(Event)) {
             // error check to avoid segfault
-            Serial.println(F("\tfail, data error"));
+            SERIAL_PRINTLN(F("\tfail, data error"));
             return;  // failed to read the radio
         }
         memcpy(buffer+buffer_size, payload, len);
         buffer_size += len;
         if (buffer_size == sizeof(Event)) {
-            Serial.println(F("\tok"));
+            SERIAL_PRINTLN(F("\tok"));
             break;
         }
 
@@ -118,7 +119,7 @@ void _read() {
         }
 
         if (timeout) {
-            Serial.println(F("\tfail, timeout"));
+            SERIAL_PRINTLN(F("\tfail, timeout"));
             return;  // failed to read the radio
         }
     }
@@ -126,6 +127,7 @@ void _read() {
     // flush buffer
     memcpy((char*)&status.event, buffer, sizeof(Event));
     status.updated = true;
+#ifdef DEBUG
     Serial.println(F("got response:"));
     Serial.print(F("\tavailable: "));
     Serial.println((int)status.event.available);
@@ -141,6 +143,7 @@ void _read() {
     }
     Serial.println();
     delay(500);  // wait for serial write to finish
+#endif
 
     epaperDisplay();  // update display
 }

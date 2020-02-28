@@ -2,6 +2,7 @@
 #include <Servo.h>
 #include "servo.h"
 #include "status.h"
+#include "macro.h"
 
 Servo servo;
 
@@ -17,16 +18,16 @@ void servoUnlock() {
         status.authorized = false;
         status.unlock_time = millis();
         if (!status.unlocked) {
-            Serial.print(F("servo unlocking at "));
-            Serial.println(status.unlock_time);
+            SERIAL_PRINT(F("servo unlocking at "));
+            SERIAL_PRINTLN(status.unlock_time);
             status.unlocked = true;
             servo.write(SERVO_UNLOCK);
         }
     } else if (status.unlocked) {
         unsigned long now = millis();
         if (now - status.unlock_time > SERVO_DELAY) {
-            Serial.print(F("servo locking at "));
-            Serial.println(now);
+            SERIAL_PRINT(F("servo locking at "));
+            SERIAL_PRINTLN(now);
             status.unlocked = false;
             servo.write(SERVO_LOCK);
         }

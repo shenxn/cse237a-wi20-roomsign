@@ -3,6 +3,7 @@
 #include "epaper.h"
 #include "epdpaint.h"
 #include "status.h"
+#include "macro.h"
 
 #define COLORED     0
 #define UNCOLORED   1
@@ -92,7 +93,7 @@ void epaperDrawTemplate(bool available) {
 
 void epaperSetup() {
     if (epd.Init(lut_full_update) != 0) {
-        Serial.print("e-Paper init failed");
+        SERIAL_PRINT(F("e-Paper init failed"));
         return;
     }
 
@@ -111,11 +112,11 @@ void epaperDisplay() {
     }
     status.updated = false;
 
-    Serial.print("display available: ");
-    Serial.println((int)status.event.available);
+    SERIAL_PRINT(F("display available: "));
+    SERIAL_PRINTLN((int)status.event.available);
 
     // if (epd.Init(lut_full_update) != 0) {
-    //     Serial.print("e-Paper init failed");
+    //     SERIAL_PRINT(F("e-Paper init failed"));
     //     return;
     // }
     epd.Reset();

@@ -2,6 +2,7 @@
 #include <MFRC522.h>
 #include "rfid.h"
 #include "status.h"
+#include "macro.h"
 
 MFRC522 mfrc522(RFID_SS_PIN, RFID_RST_PIN);
 
@@ -26,19 +27,21 @@ void rfidRead() {
     }
 
     //Show UID on serial monitor
-    Serial.print(F("UID tag: "));
+    SERIAL_PRINT(F("UID tag: "));
     bool match = true;
     for (byte i = 0; i < mfrc522.uid.size; i++) {
+#ifdef DEBUG
         Serial.print(mfrc522.uid.uidByte[i], HEX);
+#endif
         if (i >= sizeof(status.event.key_id) || mfrc522.uid.uidByte[i] != (uint8_t)status.event.key_id[i]) {
             match = false;
         }
     }
 
     if ((uint8_t)status.event.available || match) {
-        Serial.println(F(" granted"));
+        SERIAL_PRINTLN(F(" granted"));
         status.authorized = true;
     } else {
-        Serial.println(F(" denied"));
+        SERIAL_PRINTLN(F(" denied"));
     }
 }

@@ -1,14 +1,22 @@
 #include <SPI.h>
+#include <avr/power.h>
 #include "radio.h"
 #include "epaper.h"
 #include "status.h"
 #include "rfid.h"
 #include "servo.h"
 #include "epdif.h"
+#include "macro.h"
 
 void setup() {
+#ifdef DEBUG
     Serial.begin(9600);
     Serial.println(F("starting"));
+#endif
+
+    // turn off not used things
+    ADCSRA = 0;  // disable ADC
+    power_adc_disable();
 
     // set all SS pins to high to prevent SPI conflict
     pinMode(RFID_SS_PIN, OUTPUT);
@@ -18,17 +26,17 @@ void setup() {
     pinMode(RADIO_CSN_PIN, OUTPUT);
     digitalWrite(RADIO_CSN_PIN, HIGH);
 
-    Serial.println(F("setup rfid"));
+    SERIAL_PRINTLN(F("setup rfid"));
     rfidInit();
 
-    Serial.println(F("setup servo"));
+    SERIAL_PRINTLN(F("setup servo"));
     servoSetup();
 
-    Serial.println(F("setup epaper"));
+    SERIAL_PRINTLN(F("setup epaper"));
     epaperSetup();
 
     // should be after epaper
-    Serial.println(F("setup radio"));
+    SERIAL_PRINTLN(F("setup radio"));
     radioConfigure();
 }
 
