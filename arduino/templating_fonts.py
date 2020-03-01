@@ -35,6 +35,8 @@ def templatingFont(fontSize, width):
 
 # templatingFont(8, 4)
 # templatingFont(12, 6)
-templatingFont(16, 8)
-templatingFont(20, 10)
+# templatingFont(16, 8)
+# templatingFont(20, 10)
 templatingFont(24, 12)
+templatingFont(28, 14)
+templatingFont(32, 16)

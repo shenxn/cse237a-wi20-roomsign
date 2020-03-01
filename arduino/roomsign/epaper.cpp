@@ -1,7 +1,7 @@
 #include <SPI.h>
-#include "epd2in9.h"
-#include "epaper.h"
+#include "epd4in2b.h"
 #include "epdpaint.h"
+#include "epaper.h"
 #include "status.h"
 #include "macro.h"
 
@@ -9,81 +9,56 @@
 #define UNCOLORED   1
 
 Epd epd;
-unsigned char image[480];
+unsigned char image[512];
 Paint paint(image, 0, 0);
 
 
-void epaperDrawTemplate(bool available) {
-    // clear memory
-    epd.ClearFrameMemory(0xFF);
+void fillArea(int x, int y, int w, int l, bool is_red=false) {
+    epd.SendCommand(PARTIAL_IN);
+    epd.SendCommand(PARTIAL_WINDOW);
+    epd.SendData(x >> 8);
+    epd.SendData(x & 0xf8);     // x should be the multiple of 8, the last 3 bit will always be ignored
+    epd.SendData(((x & 0xfff8) + w  - 1) >> 8);
+    epd.SendData(((x & 0xf8) + w  - 1) | 0x07);
+    epd.SendData(y >> 8);        
+    epd.SendData(y & 0xff);
+    epd.SendData((y + l - 1) >> 8);        
+    epd.SendData((y + l - 1) & 0xff);
+    epd.SendData(0x01);         // Gates scan both inside and outside of the partial window. (default) 
+    EpdIf::DelayMs(2);
+    epd.SendCommand(is_red ? DATA_START_TRANSMISSION_2 : DATA_START_TRANSMISSION_1);
+    for(int i = 0; i < w  / 8 * l; i++) {
+        epd.SendData(0x00);  
+    }
+    EpdIf::DelayMs(2);
+    epd.SendCommand(PARTIAL_OUT);
+}
 
-    // draw room name
-    paint.SetRotate(ROTATE_90);
-    paint.SetWidth(ROOM_NAME_HEIGHT);
-    paint.SetHeight(WIDTH / 2);
-    paint.Clear(COLORED);
-    paint.DrawStringAt(PADDING, (ROOM_NAME_HEIGHT - ROOM_NAME_FONT.Height) / 2, ROOM_NAME, &ROOM_NAME_FONT, UNCOLORED);
-    epd.SetFrameMemory(
-        paint.GetImage(),
-        HEIGHT - ROOM_NAME_HEIGHT,
-        0,
-        paint.GetWidth(),
-        paint.GetHeight()
-    );
-    paint.Clear(COLORED);
-    epd.SetFrameMemory(
-        paint.GetImage(),
-        HEIGHT - ROOM_NAME_HEIGHT,
-        WIDTH / 2,
-        paint.GetWidth(),
-        paint.GetHeight()
-    );
 
-    if (available) {
-        paint.SetWidth(STATUS_FONT.Height);
-        paint.SetHeight(9 * STATUS_FONT.Width);
-        paint.Clear(UNCOLORED);
-        paint.DrawStringAt(0, 0, "AVAILABLE", &STATUS_FONT, COLORED);
-        epd.SetFrameMemory(
-            paint.GetImage(),
-            (HEIGHT - ROOM_NAME_HEIGHT - STATUS_FONT.Height) / 2,
-            PADDING,
-            paint.GetWidth(),
-            paint.GetHeight()
-        );
-    } else {
-        paint.SetWidth(STATUS_FONT.Height);
-        paint.SetHeight(STATUS_WIDTH);
-        paint.Clear(COLORED);
-        for (int y = 0; y < HEIGHT - ROOM_NAME_HEIGHT; y += STATUS_FONT.Height) {
-            if (y + STATUS_FONT.Height > HEIGHT - ROOM_NAME_HEIGHT) {
-                y = HEIGHT - ROOM_NAME_HEIGHT - STATUS_FONT.Height;
+void drawString(int x, int y, const char *str, sFONT *font, int colored, bool isRed=false) {
+    int len = strlen(str);
+    for (int i = 0; i < len; i += 8) {
+        paint.SetWidth(font->Width * min(8, len - i));
+        paint.SetHeight(font->Height);
+        paint.Clear(!colored);
+        for (int j = 0; j < 8; ++j) {
+            if (i + j == len) {
+                break;
             }
-            epd.SetFrameMemory(
-                paint.GetImage(),
-                y,
-                0,
-                paint.GetWidth(),
-                paint.GetHeight()
-            );
+            paint.DrawCharAt(j * font->Width, 0, str[i + j], font, colored);
         }
-        paint.DrawStringAt(PADDING, 0, "IN USE", &STATUS_FONT, UNCOLORED);
-        epd.SetFrameMemory(
-            paint.GetImage(),
-            (HEIGHT - ROOM_NAME_HEIGHT - STATUS_FONT.Height) / 2,
-            0,
-            paint.GetWidth(),
-            paint.GetHeight()
-        );
-
-        paint.SetWidth(DETAIL_LINE_HEIGHT);
-        paint.SetHeight(2 * DETAIL_FONT.Width);
-        paint.Clear(UNCOLORED);
-        paint.DrawStringAt(0, (DETAIL_LINE_HEIGHT - DETAIL_FONT.Height) / 2, "BY", &DETAIL_FONT, COLORED);
-        epd.SetFrameMemory(
-            paint.GetImage(),
-            HEIGHT - ROOM_NAME_HEIGHT - DETAIL_PADDING - 3 * DETAIL_LINE_HEIGHT,
-            STATUS_WIDTH + DETAIL_PADDING,
+        unsigned char *bufferBlack = NULL;
+        unsigned char *bufferRed = NULL;
+        if (isRed) {
+            bufferRed = paint.GetImage();
+        } else {
+            bufferBlack = paint.GetImage();
+        }
+        epd.SetPartialWindow(
+            bufferBlack,
+            bufferRed,
+            x + i * font->Width,
+            y,
             paint.GetWidth(),
             paint.GetHeight()
         );
@@ -91,15 +66,57 @@ void epaperDrawTemplate(bool available) {
 }
 
 
+void epaperDrawTemplate(bool available) {
+    // clear memory
+    epd.ClearFrame();
+
+    // draw room name
+    fillArea(0, 0, WIDTH, ROOM_NAME_HEIGHT);
+    drawString(
+        PADDING, 
+        (ROOM_NAME_HEIGHT - ROOM_NAME_FONT.Height) / 2,
+        ROOM_NAME,
+        &ROOM_NAME_FONT,
+        UNCOLORED
+    );
+
+    if (available) {
+        drawString(
+            PADDING, 
+            ROOM_NAME_HEIGHT + (HEIGHT - ROOM_NAME_HEIGHT - STATUS_FONT.Height) / 2,
+            "AVAILABLE",
+            &STATUS_FONT,
+            COLORED
+        );
+    } else {
+        fillArea(0, ROOM_NAME_HEIGHT + DETAIL_HEIGHT, WIDTH, STATUS_HEIGHT, true);
+        drawString(
+            PADDING, 
+            ROOM_NAME_HEIGHT + DETAIL_HEIGHT + (STATUS_HEIGHT - STATUS_FONT.Height) / 2,
+            "IN USE",
+            &STATUS_FONT,
+            UNCOLORED,
+            true
+        );
+
+        drawString(
+            PADDING,
+            ROOM_NAME_HEIGHT + PADDING + 2 * DETAIL_LINE_HEIGHT,
+            "BY",
+            &DETAIL_FONT,
+            COLORED
+        );
+    }
+}
+
+
 void epaperSetup() {
-    if (epd.Init(lut_full_update) != 0) {
+    if (epd.Init() != 0) {
         SERIAL_PRINT(F("e-Paper init failed"));
         return;
     }
 
-    epd.ClearFrameMemory(0xFF);
-    epd.DisplayFrame();
-    epd.ClearFrameMemory(0xFF);
+    epd.ClearFrame();
     epd.DisplayFrame();
 
     epd.Sleep();
@@ -115,11 +132,10 @@ void epaperDisplay() {
     SERIAL_PRINT(F("display available: "));
     SERIAL_PRINTLN((int)status.event.available);
 
-    // if (epd.Init(lut_full_update) != 0) {
-    //     SERIAL_PRINT(F("e-Paper init failed"));
-    //     return;
-    // }
-    epd.Reset();
+    if (epd.Init() != 0) {
+        SERIAL_PRINT(F("e-Paper init failed"));
+        return;
+    }
 
     if (status.event.available) {
         epaperDrawTemplate(true);
@@ -127,27 +143,22 @@ void epaperDisplay() {
     } else {
         epaperDrawTemplate(false);
 
-        paint.SetRotate(ROTATE_90);
-        paint.SetWidth(DETAIL_LINE_HEIGHT);
-        paint.SetHeight(DETAIL_LINE_WIDTH);
+        int x = PADDING;
+        int y = ROOM_NAME_HEIGHT + PADDING;
+        drawString(
+            x,
+            y,
+            status.event.summary,
+            &SUMMARY_FONT,
+            COLORED
+        );
 
-        int x = HEIGHT - ROOM_NAME_HEIGHT - DETAIL_PADDING - DETAIL_LINE_HEIGHT;
-        int y = STATUS_WIDTH + DETAIL_PADDING;
-        paint.Clear(UNCOLORED);
-        paint.DrawStringAt(0, 0, status.event.summary, &SUMMARY_FONT, COLORED);
-        epd.SetFrameMemory(paint.GetImage(), x, y, paint.GetWidth(), paint.GetHeight());
+        y += DETAIL_LINE_HEIGHT;
+        drawString(x, y, status.event.time, &DETAIL_FONT, COLORED);
 
-        x -= DETAIL_LINE_HEIGHT;
-        paint.Clear(UNCOLORED);
-        paint.DrawStringAt(0, (DETAIL_LINE_HEIGHT - DETAIL_FONT.Height) / 2, status.event.time, &DETAIL_FONT, COLORED);
-        epd.SetFrameMemory(paint.GetImage(), x, y, paint.GetWidth(), paint.GetHeight());
-
-        x -= DETAIL_LINE_HEIGHT;
-        y += 3 * DETAIL_FONT.Width;
-        paint.SetHeight(DETAIL_LINE_WIDTH - 3 * DETAIL_FONT.Width);
-        paint.Clear(UNCOLORED);
-        paint.DrawStringAt(0, (DETAIL_LINE_HEIGHT - DETAIL_FONT.Height) / 2, status.event.creator, &DETAIL_FONT, COLORED);
-        epd.SetFrameMemory(paint.GetImage(), x, y, paint.GetWidth(), paint.GetHeight());
+        x += 3 * DETAIL_FONT.Width;
+        y += DETAIL_LINE_HEIGHT;
+        drawString(x, y, status.event.creator, &DETAIL_FONT, COLORED);
 
         epd.DisplayFrame();
     }

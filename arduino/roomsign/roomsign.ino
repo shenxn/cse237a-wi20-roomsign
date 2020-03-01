@@ -1,11 +1,11 @@
 #include <SPI.h>
 #include <avr/power.h>
+#include "epdif.h"
 #include "radio.h"
 #include "epaper.h"
 #include "status.h"
 #include "rfid.h"
 #include "servo.h"
-#include "epdif.h"
 #include "macro.h"
 #include "sleep.h"
 
