@@ -11,7 +11,7 @@
 
 void setup() {
 #ifdef DEBUG
-    Serial.begin(19200);
+    Serial.begin(115200);
     Serial.println(F("starting"));
 #endif
 
