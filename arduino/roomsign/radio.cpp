@@ -93,13 +93,9 @@ void bits_to_str(char *target, byte *bits, int len) {
 void bits_to_time(char *target, byte *bits) {
     for (int i = 0; i < 2; i++) {
         int v = bits_to_int(bits, 11);
-        SERIAL_PRINTLN(v);
         int hour = v / 60;
         int hour12 = hour % 12;
         int minute = v % 60;
-        SERIAL_PRINTLN(hour);
-        SERIAL_PRINTLN(hour12);
-        SERIAL_PRINTLN(minute);
         sprintf(target, "%02d:%02d%s", hour12, minute, (hour / 12 ? "AM" : "PM"));
         bits += 11;
         target += 7;

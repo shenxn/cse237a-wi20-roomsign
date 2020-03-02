@@ -101,7 +101,7 @@ void epaperDrawTemplate(bool available) {
 
         drawString(
             PADDING,
-            ROOM_NAME_HEIGHT + PADDING + 2 * DETAIL_LINE_HEIGHT,
+            ROOM_NAME_HEIGHT + 3 * PADDING + SUMMARY_FONT.Height + DETAIL_FONT.Height,
             "BY",
             &DETAIL_FONT,
             COLORED
@@ -153,11 +153,11 @@ void epaperDisplay() {
             COLORED
         );
 
-        y += DETAIL_LINE_HEIGHT;
+        y += SUMMARY_FONT.Height + PADDING;
         drawString(x, y, status.event.time, &DETAIL_FONT, COLORED);
 
         x += 3 * DETAIL_FONT.Width;
-        y += DETAIL_LINE_HEIGHT;
+        y += DETAIL_FONT.Height + PADDING;
         drawString(x, y, status.event.creator, &DETAIL_FONT, COLORED);
 
         epd.DisplayFrame();
