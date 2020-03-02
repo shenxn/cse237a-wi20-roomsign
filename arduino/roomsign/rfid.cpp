@@ -13,13 +13,17 @@ void rfidInit() {
     mfrc522.PCD_DumpVersionToSerial();
     status.authorized = false;
 
+#ifdef SLEEP
     // sleep RFID
     mfrc522.PCD_SoftPowerDown();
+#endif
 }
 
 
 void rfidRead() {
+#ifdef SLEEP
     mfrc522.PCD_SoftPowerUp();
+#endif
 
     if (mfrc522.PICC_IsNewCardPresent() && mfrc522.PICC_ReadCardSerial()) {
 
@@ -48,5 +52,7 @@ void rfidRead() {
         }
     }
 
+#ifdef SLEEP
     mfrc522.PCD_SoftPowerDown();
+#endif
 }

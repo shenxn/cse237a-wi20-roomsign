@@ -77,7 +77,6 @@ class Radio:
     def send_payload(self):
         if self.payload is None:
             return
-        print(datetime.now().strftime('%H:%M:%S'))
         print('send data')
         self.payload_sent = False  # only one success is needed
         count = 0

@@ -52,5 +52,9 @@ void loop() {
     }
     rfidRead();
     servoUnlock();
+#ifdef SLEEP
     sleep();
+#else
+    delay(1000);
+#endif
 }

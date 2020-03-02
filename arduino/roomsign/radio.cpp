@@ -36,7 +36,9 @@ void radioConfigure() {
 }
 
 void radioFetch() {
+#ifdef SLEEP
     radio.powerUp();
+#endif
     // send signal
     radio.stopListening();
     SERIAL_PRINT(F("sending signal"));
@@ -60,7 +62,9 @@ void radioFetch() {
     } else {
         SERIAL_PRINTLN(F("\tfail"));
     }
+#ifdef SLEEP
     radio.powerDown();
+#endif
     epaperDisplay();
 }
 
