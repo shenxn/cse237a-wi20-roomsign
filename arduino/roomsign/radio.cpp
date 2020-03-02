@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <SPI.h>
 #include <RF24.h>
+#include <RF24Network.h>
 #include "radio.h"
 #include "printf.h"
 #include "status.h"
@@ -8,27 +9,30 @@
 #include "macro.h"
 #include "sleep.h"
 
-const uint64_t rx_pipe = 0xF0F0F0F0E1;
-const uint64_t tx_pipe = 0xF0F0F0F0D2;
+const uint16_t channel = 90;
+const uint16_t node_address = 00;
+const uint16_t target_address = 01;
 
 RF24 radio(RADIO_CE_PIN, RADIO_CSN_PIN);
+RF24Network network(radio);
 
 void radioConfigure() {
     printf_begin();
 
     radio.begin();
+    network.begin(channel, node_address);
 
     // set the PA Level low to prevent power supply related issues
     // radio.setPALevel(RF24_PA_LOW);
 
-    // radio.setDataRate(RF24_250KBPS);
+    radio.setDataRate(RF24_2MBPS);
 
-    radio.setAutoAck(1);
-    radio.enableDynamicPayloads();
-    radio.setRetries(5, 15);
-    radio.openWritingPipe(tx_pipe);
-    radio.openReadingPipe(1, rx_pipe);
-    radio.startListening();
+    // radio.setAutoAck(1);
+    // radio.enableDynamicPayloads();
+    // radio.setRetries(5, 15);
+    // radio.openWritingPipe(tx_pipe);
+    // radio.openReadingPipe(1, rx_pipe);
+    // radio.startListening();
     radio.printDetails();
 
     // initial fetch
@@ -38,15 +42,16 @@ void radioConfigure() {
 void radioFetch() {
     radio.powerUp();
     // send signal
-    radio.stopListening();
+    network.update();
     SERIAL_PRINT(F("sending signal"));
     byte payload = 0;
-    if (radio.write(&payload, 1)) {
-        radio.startListening();
+    RF24NetworkHeader header(target_address);
+    if (network.write(header, &payload, 1)) {
         SERIAL_PRINTLN(F("\tok, wait for response"));
         unsigned long started_waiting_at = millis();
         bool timeout = false;
-        while (!timeout && !radio.available()) {
+        while (!timeout && !network.available()) {
+            network.update();
             if (millis() - started_waiting_at > WAITING_TIMEOUT) {
                 timeout = true;
             }
@@ -56,7 +61,6 @@ void radioFetch() {
         } else {
             radioRead();
         }
-        radio.stopListening();
     } else {
         SERIAL_PRINTLN(F("\tfail"));
     }
@@ -93,13 +97,9 @@ void bits_to_str(char *target, byte *bits, int len) {
 void bits_to_time(char *target, byte *bits) {
     for (int i = 0; i < 2; i++) {
         int v = bits_to_int(bits, 11);
-        SERIAL_PRINTLN(v);
         int hour = v / 60;
         int hour12 = hour % 12;
         int minute = v % 60;
-        SERIAL_PRINTLN(hour);
-        SERIAL_PRINTLN(hour12);
-        SERIAL_PRINTLN(minute);
         sprintf(target, "%02d:%02d%s", hour12, minute, (hour / 12 ? "AM" : "PM"));
         bits += 11;
         target += 7;
@@ -111,33 +111,20 @@ void bits_to_time(char *target, byte *bits) {
 }
 
 void radioRead() {
-    while (radio.available()) {
+    network.update();
+    while (network.available()) {
         SERIAL_PRINTLN(F("receiving data"));
-        uint8_t len = radio.getDynamicPayloadSize();
 
-        // If a corrupt dynamic payload is received, it will be flushed
-        if(!len){
-            continue;
-                continue; 
-            continue;
-        }
-
-        byte payload[32];
-        radio.read(payload, len);
-        SERIAL_PRINT(F("\treceived payload of size "));
-        SERIAL_PRINTLN(len);
-
-        if (len != 32) {
-            SERIAL_PRINTLN(F("\tfail, error data"));
-            continue;
-        }
+        RF24NetworkHeader header;
+        byte payload[sizeof(Event)];
+        network.read(header, payload, sizeof(payload));
         
         SERIAL_PRINTLN(F("\tok"));
 
         // check for update
         bool equal = true;
-        for (int i = 0; i < 32; ++i) {
-            if (payload[i] != status.last_payload[i]) {
+        for (int i = 0; i < sizeof(payload); ++i) {
+            if (payload[i] != ((byte*)&status.event)[i]) {
                 equal = false;
                 break;
             }
@@ -146,32 +133,32 @@ void radioRead() {
             SERIAL_PRINTLN(F("\tno change"));
             continue;
         }
-        memcpy(status.last_payload, payload, 32);
+        memcpy(&status.event, payload, sizeof(Event));
         
-        // decode payload
-        byte bits[256];
-        for (int i = 0; i < 32; ++i) {
-            for (int j = 7; j >= 0; --j) {
-                bits[(i << 3) + j] = payload[i] & 1;
-                payload[i] >>= 1;
-            }
-        }
-        Event decoded;
-        uint8_t offset = 0;
-        decoded.available = bits[0];
-        offset += 1;
-        bits_to_str(decoded.summary, bits + offset, sizeof(decoded.summary));
-        offset += 6 * (sizeof(decoded.summary) - 1);
-        bits_to_time(decoded.time, bits + offset);
-        offset += 2 * 11;
-        bits_to_str(decoded.creator, bits + offset, sizeof(decoded.creator));
-        offset += 6 * (sizeof(decoded.creator) - 1);
-        for (int i = 0; i < sizeof(decoded.key_id); i++) {
-            decoded.key_id[i] = bits_to_int(bits + offset, 8);
-            offset += 8;
-        }
+        // // decode payload
+        // byte bits[256];
+        // for (int i = 0; i < 32; ++i) {
+        //     for (int j = 7; j >= 0; --j) {
+        //         bits[(i << 3) + j] = payload[i] & 1;
+        //         payload[i] >>= 1;
+        //     }
+        // }
+        // Event decoded;
+        // uint8_t offset = 0;
+        // decoded.available = bits[0];
+        // offset += 1;
+        // bits_to_str(decoded.summary, bits + offset, sizeof(decoded.summary));
+        // offset += 6 * (sizeof(decoded.summary) - 1);
+        // bits_to_time(decoded.time, bits + offset);
+        // offset += 2 * 11;
+        // bits_to_str(decoded.creator, bits + offset, sizeof(decoded.creator));
+        // offset += 6 * (sizeof(decoded.creator) - 1);
+        // for (int i = 0; i < sizeof(decoded.key_id); i++) {
+        //     decoded.key_id[i] = bits_to_int(bits + offset, 8);
+        //     offset += 8;
+        // }
 
-        memcpy(&status.event, &decoded, sizeof(Event));
+        // memcpy(&status.event, &decoded, sizeof(Event));
         status.updated = true;
 #ifdef DEBUG
         Serial.println(F("got response:"));
