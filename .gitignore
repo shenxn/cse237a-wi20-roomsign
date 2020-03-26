@@ -6,6 +6,7 @@
 !*.h
 !*.py
 !*.tpl
+!*.pdf
 !Makefile
 !arduino
 !arduino/roomsign
